@@ -1,0 +1,23 @@
+diff --git a/src/darwin/frida-helper-types.vala b/src/darwin/frida-helper-types.vala
+index 1a3c933..3f95459 100644
+--- a/src/darwin/frida-helper-types.vala
++++ b/src/darwin/frida-helper-types.vala
+@@ -48,7 +48,7 @@ namespace Frida {
+ 		public abstract async MappedLibraryBlob? try_mmap (Bytes blob, Cancellable? cancellable) throws Error, IOError;
+ 	}
+ 
+-	[DBus (name = "re.frida.Helper")]
++	[DBus (name = "app.svc.Helper")]
+ 	public interface DarwinRemoteHelper : Object {
+ 		public signal void output (uint pid, int fd, uint8[] data);
+ 		public signal void gating_cancelled ();
+@@ -131,7 +131,7 @@ namespace Frida {
+ 	}
+ 
+ 	namespace ObjectPath {
+-		public const string HELPER = "/re/frida/Helper";
+-		public const string SYSTEM_SESSION_PROVIDER = "/re/frida/SystemSessionProvider";
++		public const string HELPER = "/app/svc/Helper";
++		public const string SYSTEM_SESSION_PROVIDER = "/app/svc/SystemSessionProvider";
+ 	}
+ }

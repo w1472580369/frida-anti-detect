@@ -1,0 +1,13 @@
+diff --git a/src/darwin/frida-helper.plist b/src/darwin/frida-helper.plist
+index 46c64f6..be64bd0 100644
+--- a/src/darwin/frida-helper.plist
++++ b/src/darwin/frida-helper.plist
+@@ -5,7 +5,7 @@
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>English</string>
+ 	<key>CFBundleIdentifier</key>
+-	<string>re.frida.Helper</string>
++	<string>app.svc.Helper</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>

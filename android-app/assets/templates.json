@@ -1,0 +1,80 @@
+[
+ {
+  "category": "基础信息",
+  "name": "进程与架构",
+  "desc": "打印 PID、架构与加载模块数",
+  "code": "send(\"[*] PID = \" + Process.id);\nsend(\"[*] arch = \" + Process.arch);\nsend(\"[*] platform = \" + Process.platform);\nsend(\"[*] 模块数 = \" + Process.enumerateModules().length);\nsend(\"[*] 当前库基址 = \" + Module.getBaseAddress(Process.enumerateModules()[0].name));"
+ },
+ {
+  "category": "基础信息",
+  "name": "主模块导出(前80)",
+  "desc": "列出主模块前 80 个导出符号",
+  "code": "var mod = Process.enumerateModules()[0];\nmod.enumerateExports().slice(0, 80).forEach(function (e) {\n    send(e.type + \" \" + e.name + \" @ \" + e.address);\n});"
+ },
+ {
+  "category": "Native Hook",
+  "name": "按符号拦截函数",
+  "desc": "通过导出符号定位并 Hook，打印参数/返回值",
+  "code": "var target = Module.getExportByName(null, \"getprop\") || Module.getExportByName(\"libc.so\", \"getprop\");\nif (!target) { send(\"[-] 找不到该符号\"); } else {\n    send(\"[+] 目标 = \" + target);\n    Interceptor.attach(target, {\n        onEnter(args) { send(\"[>] 进入: \" + args[0]); },\n        onLeave(retval) { send(\"[<] 返回: \" + retval); }\n    });\n}"
+ },
+ {
+  "category": "Native Hook",
+  "name": "基址+偏移拦截",
+  "desc": "按模块基址+偏移定位函数并 Hook",
+  "code": "var base = Module.getBaseAddress(\"libexample.so\");\nvar target = base.add(0x12345);\nsend(\"[+] hook @ \" + target);\nInterceptor.attach(target, {\n    onEnter(args) {\n        this.a0 = args[0];\n        send(\"[>] a0 = \" + args[0].toInt32());\n    },\n    onLeave(retval) { send(\"[<] 返回 = \" + retval.toInt32()); }\n});"
+ },
+ {
+  "category": "Native Hook",
+  "name": "参数 hexdump 追踪",
+  "desc": "打印调用栈与参数内存 hexdump，适合逆向分析",
+  "code": "var dump = function (x, n) {\n    try { return hexdump(x, {length: Math.min(n || 32, 64)}); }\n    catch (e) { return \"(读取失败)\"; }\n};\nInterceptor.attach(Module.getExportByName(null, \"strlen\"), {\n    onEnter(args) {\n        send(Thread.backtrace(this.context, Backtracer.ACCURATE)\n            .map(DebugSymbol.fromAddress).join(\"\\n\"));\n        send(\"input:\\n\" + dump(args[0], 64));\n    }\n});"
+ },
+ {
+  "category": "Java Hook",
+  "name": "Hook Java 方法(含重载)",
+  "desc": "按类名+方法名 Hook，自动处理重载",
+  "code": "if (Java.available) {\n    Java.perform(function () {\n        var target = Java.use(\"com.example.MainActivity\");\n        target.evilMethod.overloads.forEach(function (ov) {\n            ov.implementation = function () {\n                send(\"[>] \" + ov.method_name + \" 被调用, 参数: \" + arguments[0]);\n                return ov.apply(this, arguments);\n            };\n        });\n        send(\"[*] Java Hook 已安装\");\n    });\n} else { send(\"[-] 目标不是 Java 应用\"); }"
+ },
+ {
+  "category": "Java Hook",
+  "name": "动态创建 Java 对象并调用",
+  "desc": "实例化类、改字段、调用方法",
+  "code": "if (Java.available) {\n    Java.perform(function () {\n        var Cls = Java.use(\"com.example.Settings\");\n        var inst = Cls.$new();\n        inst.setPremium(\"true\");       // 自定义方法示例\n        Cls.token.value = \"改后的值\";   // 改静态字段\n        send(\"[*] 完成: \" + inst.toString());\n    });\n}"
+ },
+ {
+  "category": "内存",
+  "name": "扫描内存字符串",
+  "desc": "在指定模块内存中扫描 ASCII 字符串模式",
+  "code": "var bytes = \"FLAG{hello}\";\nvar hex = Array.from(bytes).map(function (c) { return c.charCodeAt(0).toString(16); }).join(\" \");\nvar mod = Process.enumerateModules()[0];\nsend(\"[*] 扫描 \" + bytes + \" ...\");\nvar hits = [];\nMemory.scan(mod.base, mod.size, hex, {\n    onMatch(addr, size) {\n        hits.push(addr.toString());\n        send(\"  found: \" + addr);\n        if (hits.length >= 20) return \"stop\";\n    },\n    onComplete() { send(\"[*] 共命中 \" + hits.length + \" 处\"); }\n});\n"
+ },
+ {
+  "category": "内存",
+  "name": "读取指定地址",
+  "desc": "从绝对地址读取一段 bytes",
+  "code": "var addr = ptr(\"0x7000000000\");\nvar n = 64;\ntry {\n    var data = Memory.readByteArray(addr, n);\n    send(\"bytes @ \" + addr + \":\\n\" + hexdump(data, {header: true, ansi: false}));\n} catch (e) { send(\"[-] 读取失败: \" + e); }"
+ },
+ {
+  "category": "通用工具",
+  "name": "快速只读 Trace(native)",
+  "desc": "遍历主模块导出，打印被调用命中(粗粒度)",
+  "code": "var mod = Process.enumerateModulesWithoutTracing()[0] || Process.enumerateModules()[1] || Process.enumerateModules()[0];\nvar count = 0;\nmod.enumerateExports().forEach(function (e) {\n    if (e.type !== \"function\") return;\n    Interceptor.attach(e.address, {\n        onEnter() { if (count++ < 50) send(\"[trace] \" + e.name); },\n        onLeave() {}\n    });\n});\nsend(\"[*] 已对 \" + mod.name + \" 的导出函数标记 trace\");"
+ },
+ {
+  "category": "通用工具",
+  "name": "枚举某 so 的全部导出",
+  "desc": "打印指定模块所有 export 类型与地址",
+  "code": "var m = Process.findModuleByName(\"libc.so\");\nif (!m) { send(\"[-] 模块不存在\"); }\nelse {\n    m.enumerateExports().forEach(function (e) {\n        send(e.type + \"\\t\" + e.name + \"\\t\" + e.address);\n    });\n}"
+ },
+ {
+  "category": "Android",
+  "name": "枚举已加载模块",
+  "desc": "列出目标进程全部 so 及基址/大小",
+  "code": "Process.enumerateModules().forEach(function (m) {\n    send(m.name + \"\\t\" + m.base + \"\\t\" + m.size);\n});"
+ },
+ {
+  "category": "Android",
+  "name": "Hook JNI RegisterNatives",
+  "desc": "拦截动态注册，打印类名/方法名/函数地址",
+  "code": "var sym = Module.getExportByName(null, \"RegisterNatives\");\nInterceptor.attach(sym, {\n    onEnter(args) {\n        var env = args[0], clazz = args[1], methods = args[2], count = args[3].toInt32();\n        var cls = Java.vm.getEnv().getObjectClass(clazz);\n        var name = Java.vm.getEnv().getClassName(cls);\n        send(\"[RegisterNatives] \" + name + \" count=\" + count);\n        for (var i = 0; i < count; i++) {\n            var m = methods.add(i * Process.pointerSize * 3);\n            send(\"  \" + m.readPointer().readCString() + \" -> \" + m.add(Process.pointerSize * 2).readPointer());\n        }\n    }\n});"
+ }
+]

@@ -1,0 +1,26 @@
+diff --git a/gum/gumcmodule.c b/gum/gumcmodule.c
+index 80dfd7e..3580c32 100644
+--- a/gum/gumcmodule.c
++++ b/gum/gumcmodule.c
+@@ -479,8 +479,8 @@ gum_tcc_cmodule_new (const gchar * source,
+   tcc_set_options (state,
+       "-Wall "
+       "-Werror "
+-      "-isystem /frida "
+-      "-isystem /frida/capstone "
++      "-isystem /sysinc "
++      "-isystem /sysinc/capstone "
+       "-nostdinc "
+       "-nostdlib"
+   );
+@@ -674,8 +674,8 @@ gum_tcc_cmodule_load_header (void * opaque,
+   guint i;
+ 
+   name = path;
+-  if (g_str_has_prefix (name, "/frida/"))
+-    name += 7;
++  if (g_str_has_prefix (name, "/sysinc/"))
++    name += 8;
+ 
+   for (i = 0; i != G_N_ELEMENTS (gum_cmodule_headers); i++)
+   {

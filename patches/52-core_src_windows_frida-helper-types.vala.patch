@@ -1,0 +1,21 @@
+diff --git a/src/windows/frida-helper-types.vala b/src/windows/frida-helper-types.vala
+index 0d41020..ef32bc9 100644
+--- a/src/windows/frida-helper-types.vala
++++ b/src/windows/frida-helper-types.vala
+@@ -8,7 +8,7 @@ namespace Frida {
+ 			string[] dependencies, uint id, Cancellable? cancellable) throws Error, IOError;
+ 	}
+ 
+-	[DBus (name = "re.frida.Helper")]
++	[DBus (name = "app.svc.Helper")]
+ 	public interface WindowsRemoteHelper : Object {
+ 		public signal void uninjected (uint id);
+ 
+@@ -44,6 +44,6 @@ namespace Frida {
+ 	}
+ 
+ 	namespace ObjectPath {
+-		public const string HELPER = "/re/frida/Helper";
++		public const string HELPER = "/app/svc/Helper";
+ 	}
+ }

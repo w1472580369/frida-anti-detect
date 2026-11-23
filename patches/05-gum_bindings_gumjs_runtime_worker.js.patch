@@ -1,0 +1,22 @@
+diff --git a/bindings/gumjs/runtime/worker.js b/bindings/gumjs/runtime/worker.js
+index 242d639..5f0a131 100644
+--- a/bindings/gumjs/runtime/worker.js
++++ b/bindings/gumjs/runtime/worker.js
+@@ -28,7 +28,7 @@ export class Worker {
+ 
+     const {payload} = message;
+ 
+-    if (Array.isArray(payload) && payload[0] === 'frida:rpc') {
++    if (Array.isArray(payload) && payload[0] === 'app:rpc') {
+       const [, id, operation, ...params] = payload;
+       this._onRpcMessage(id, operation, params, data);
+       return;
+@@ -50,7 +50,7 @@ export class Worker {
+           reject(error);
+       });
+ 
+-      this.post(['frida:rpc', id, operation].concat(params));
++      this.post(['app:rpc', id, operation].concat(params));
+     });
+   }
+ 

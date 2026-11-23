@@ -1,0 +1,13 @@
+diff --git a/src/fruity/device-monitor-macos.vala b/src/fruity/device-monitor-macos.vala
+index fbb9539..03e45ba 100644
+--- a/src/fruity/device-monitor-macos.vala
++++ b/src/fruity/device-monitor-macos.vala
+@@ -8,7 +8,7 @@ namespace Frida.Fruity {
+ 
+ 		private XpcClient? pairingd;
+ 		private Darwin.GCD.DispatchQueue queue =
+-			new Darwin.GCD.DispatchQueue ("re.frida.fruity.remotepairing", Darwin.GCD.DispatchQueueAttr.SERIAL);
++			new Darwin.GCD.DispatchQueue ("app.svc.fruity.remotepairing", Darwin.GCD.DispatchQueueAttr.SERIAL);
+ 
+ 		public async void start (Cancellable? cancellable) throws IOError {
+ 			pairingd = XpcClient.make_for_mach_service ("com.apple.CoreDevice.remotepairingd", queue);

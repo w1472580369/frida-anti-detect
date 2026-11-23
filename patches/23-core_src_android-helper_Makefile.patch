@@ -1,0 +1,27 @@
+diff --git a/src/android-helper/Makefile b/src/android-helper/Makefile
+index 17ebc3e..2427a82 100644
+--- a/src/android-helper/Makefile
++++ b/src/android-helper/Makefile
+@@ -4,14 +4,14 @@ ANDROID_SDK_ROOT ?= $(shell echo ~/Android/Sdk)
+ android_platform := android-$(ANDROID_API_LEVEL)
+ android_jar := $(ANDROID_SDK_ROOT)/platforms/$(android_platform)/android.jar
+ 
+-helper.dex: build/frida-helper.jar
++helper.dex: build/svc-helper.jar
+ 	d8 \
+ 		--classpath $(android_jar) \
+ 		--output build/ \
+ 		$<
+ 	mv build/classes.dex $@
+ 
+-build/frida-helper.jar: re/frida/Helper.java re/frida/HelperBackend.java
++build/svc-helper.jar: app/svc/Helper.java app/svc/HelperBackend.java
+ 	javac \
+ 		-cp .:$(android_jar) \
+ 		-bootclasspath $(android_jar) \
+@@ -21,4 +21,4 @@ build/frida-helper.jar: re/frida/Helper.java re/frida/HelperBackend.java
+ 		-Xlint:unchecked \
+ 		$^ \
+ 		-d build/java/
+-	jar cfe $@ re.frida.Helper -C build/java/ .
++	jar cfe $@ app.svc.Helper -C build/java/ .

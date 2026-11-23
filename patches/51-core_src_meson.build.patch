@@ -1,0 +1,13 @@
+diff --git a/src/meson.build b/src/meson.build
+index b07ffa8..42645bd 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -67,7 +67,7 @@ if host_os == 'android' or have_droidy_backend
+ endif
+ 
+ if have_local_backend
+-  post_process_helper = post_process + ['executable', 're.frida.Helper']
++  post_process_helper = post_process + ['executable', 'app.svc.Helper']
+ 
+   embed_helper = [
+     python,

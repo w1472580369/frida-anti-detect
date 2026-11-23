@@ -1,0 +1,13 @@
+diff --git a/server/frida-server.plist b/server/frida-server.plist
+index 1580573..f6af08e 100644
+--- a/server/frida-server.plist
++++ b/server/frida-server.plist
+@@ -5,7 +5,7 @@
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>English</string>
+ 	<key>CFBundleIdentifier</key>
+-	<string>re.frida.Server</string>
++	<string>app.svc.Server</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>

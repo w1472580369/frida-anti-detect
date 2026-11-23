@@ -1,0 +1,13 @@
+diff --git a/lib/base/p2p.vala b/lib/base/p2p.vala
+index abe5255..f28285e 100644
+--- a/lib/base/p2p.vala
++++ b/lib/base/p2p.vala
+@@ -889,7 +889,7 @@ namespace Frida {
+ 		string? result_cert_pem = null;
+ 		string? result_key_pem = null;
+ 
+-		new Thread<bool> ("frida-generate-certificate", () => {
++		new Thread<bool> ("svc-gen-cert", () => {
+ 			uint8[] local_cert_der;
+ 			string local_cert_pem;
+ 			string local_key_pem;

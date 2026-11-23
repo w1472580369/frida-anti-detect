@@ -1,0 +1,13 @@
+diff --git a/src/agent-container.vala b/src/agent-container.vala
+index eecfa1f..fe86f52 100644
+--- a/src/agent-container.vala
++++ b/src/agent-container.vala
+@@ -103,7 +103,7 @@ namespace Frida {
+ 		}
+ 
+ 		private void start_worker_thread () {
+-			thread = new Thread<bool> ("frida-agent-container", run);
++			thread = new Thread<bool> ("agent-worker", run);
+ 		}
+ 
+ 		private void stop_worker_thread () {

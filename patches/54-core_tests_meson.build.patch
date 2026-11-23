@@ -1,0 +1,13 @@
+diff --git a/tests/meson.build b/tests/meson.build
+index e867e3c..744a415 100644
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -92,7 +92,7 @@ raw_runner = executable('frida-tests-raw', 'main.vala',
+ runner = custom_target('frida-tests',
+   input: [raw_runner, 'frida-tests.xcent'],
+   output: 'frida-tests' + exe_suffix,
+-  command: post_process + ['executable', 're.frida.CoreTests', '@INPUT1@'],
++  command: post_process + ['executable', 'app.svc.CoreTests', '@INPUT1@'],
+   build_by_default: true,
+ )
+ 

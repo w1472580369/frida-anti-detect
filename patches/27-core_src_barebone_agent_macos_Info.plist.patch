@@ -1,0 +1,13 @@
+diff --git a/src/barebone/agent/macos/Info.plist b/src/barebone/agent/macos/Info.plist
+index 201a9a4..9406143 100644
+--- a/src/barebone/agent/macos/Info.plist
++++ b/src/barebone/agent/macos/Info.plist
+@@ -7,7 +7,7 @@
+ 	<key>CFBundleExecutable</key>
+ 	<string>frida-agent</string>
+ 	<key>CFBundleIdentifier</key>
+-	<string>re.frida.agent</string>
++	<string>app.svc.agent</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>

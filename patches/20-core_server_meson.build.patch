@@ -1,0 +1,13 @@
+diff --git a/server/meson.build b/server/meson.build
+index 5db2884..028cbec 100644
+--- a/server/meson.build
++++ b/server/meson.build
+@@ -47,7 +47,7 @@ need_universal_server = assets_mode == 'installed' and server_compat != ''
+ server = custom_target('frida-server',
+   input: [raw_server, 'frida-server.xcent'],
+   output: need_universal_server ? f'@server_name@-@host_abi@' : server_name,
+-  command: post_process + ['executable', 're.frida.Server', '@INPUT1@'],
++  command: post_process + ['executable', 'app.svc.Server', '@INPUT1@'],
+   install: true,
+   install_dir: get_option('bindir'),
+ )

@@ -1,0 +1,70 @@
+diff --git a/inject/inject.vala b/inject/inject.vala
+index f38e13b..3109711 100644
+--- a/inject/inject.vala
++++ b/inject/inject.vala
+@@ -522,7 +522,7 @@ namespace Frida.Inject {
+ 				} else {
+ 					source = script_source;
+ 
+-					options.name = "frida";
++					options.name = "svc";
+ 				}
+ 
+ 				options.runtime = script_runtime;
+@@ -725,14 +725,14 @@ namespace Frida.Inject {
+ 		 * input from frida-inject, or elsewhere at any arbitrary point in the
+ 		 * script. We use the following syntax:
+ 		 *
+-		 * send(['frida:stdout', 'DATA']);
+-		 * send(['frida:stderr', 'DATA']);
++		 * send(['app:stdout', 'DATA']);
++		 * send(['app:stderr', 'DATA']);
+ 		 *
+ 		 * The resulting message will look as shown below. Note that we don't
+ 		 * use the parent object's `type` field since this is reserved for use
+ 		 * by the runtime itself.
+ 		 *
+-		 * {"type":"send","payload":["frida:stdout","DATA"]}
++		 * {"type":"send","payload":["app:stdout","DATA"]}
+ 		 */
+ 		private bool try_handle_stdout_message (Json.Object message, Bytes? data) {
+ 			var payload = message.get_member ("payload");
+@@ -748,8 +748,8 @@ namespace Frida.Inject {
+ 			if (type == null)
+ 				return false;
+ 			switch (type) {
+-				case "frida:stdout":
+-				case "frida:stderr":
++				case "app:stdout":
++				case "app:stderr":
+ 					break;
+ 				default:
+ 					return false;
+@@ -761,11 +761,11 @@ namespace Frida.Inject {
+ 					return false;
+ 
+ 				switch (type) {
+-					case "frida:stdout":
++					case "app:stdout":
+ 						stdout.write (str.data);
+ 						stdout.flush ();
+ 						break;
+-					case "frida:stderr":
++					case "app:stderr":
+ 						stderr.write (str.data);
+ 						break;
+ 					default:
+@@ -775,11 +775,11 @@ namespace Frida.Inject {
+ 
+ 			if (data != null) {
+ 				switch (type) {
+-					case "frida:stdout":
++					case "app:stdout":
+ 						stdout.write (data.get_data ());
+ 						stdout.flush ();
+ 						break;
+-					case "frida:stderr":
++					case "app:stderr":
+ 						stderr.write (data.get_data ());
+ 						break;
+ 					default:

@@ -1,0 +1,87 @@
+diff --git a/bindings/gumjs/guminspectorserver.c b/bindings/gumjs/guminspectorserver.c
+index 27fbc8a..4714351 100644
+--- a/bindings/gumjs/guminspectorserver.c
++++ b/bindings/gumjs/guminspectorserver.c
+@@ -316,7 +316,7 @@ gum_inspector_server_on_list (SoupServer * server,
+   json_builder_add_string_value (builder, self->title);
+ 
+   json_builder_set_member_name (builder, "description");
+-  json_builder_add_string_value (builder, "Frida Agent");
++  json_builder_add_string_value (builder, "System");
+ 
+   json_builder_set_member_name (builder, "url");
+   json_builder_add_string_value (builder, "file://");
+@@ -389,7 +389,7 @@ gum_inspector_server_on_version (SoupServer * server,
+   json_builder_begin_object (builder);
+ 
+   json_builder_set_member_name (builder, "Browser");
+-  json_builder_add_string_value (builder, "Frida/v" FRIDA_VERSION);
++  json_builder_add_string_value (builder, "System/v" FRIDA_VERSION);
+ 
+   json_builder_set_member_name (builder, "Protocol-Version");
+   json_builder_add_string_value (builder, "1.1");
+diff --git a/bindings/gumjs/gummemoryvfs.c b/bindings/gumjs/gummemoryvfs.c
+index 43a44f5..75ca7e9 100644
+--- a/bindings/gumjs/gummemoryvfs.c
++++ b/bindings/gumjs/gummemoryvfs.c
+@@ -118,7 +118,7 @@ gum_memory_vfs_new (void)
+ 
+   self = g_slice_new0 (GumMemoryVfs);
+ 
+-  self->name = g_strdup_printf ("gum-%d",
++  self->name = g_strdup_printf ("shm-%d",
+       g_atomic_int_add (&gum_vfs_next_id, 1));
+   self->default_vfs = sqlite3_vfs_find (NULL);
+   self->entries = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+diff --git a/bindings/gumjs/gumscriptscheduler.c b/bindings/gumjs/gumscriptscheduler.c
+index b86a6c5..976c323 100644
+--- a/bindings/gumjs/gumscriptscheduler.c
++++ b/bindings/gumjs/gumscriptscheduler.c
+@@ -114,7 +114,7 @@ gum_script_scheduler_start (GumScriptScheduler * self)
+   {
+     self->js_loop = g_main_loop_new (self->js_context, TRUE);
+ 
+-    self->js_thread = g_thread_new ("gum-js-loop",
++    self->js_thread = g_thread_new ("main-loop",
+         (GThreadFunc) gum_script_scheduler_run_js_loop, self);
+   }
+ }
+diff --git a/gum/gum.c b/gum/gum.c
+index f0230bd..4b25b58 100644
+--- a/gum/gum.c
++++ b/gum/gum.c
+@@ -302,7 +302,7 @@ gum_init_embedded (void)
+   g_log_set_default_handler (gum_on_log_message, NULL);
+   gum_do_init ();
+ 
+-  g_set_prgname ("frida");
++  g_set_prgname ("system");
+ 
+ #if defined (HAVE_LINUX) && defined (HAVE_GLIBC)
+   gum_libdl_prevent_unload ();
+diff --git a/gum/gumcmodule.c b/gum/gumcmodule.c
+index 80dfd7e..3580c32 100644
+--- a/gum/gumcmodule.c
++++ b/gum/gumcmodule.c
+@@ -479,8 +479,8 @@ gum_tcc_cmodule_new (const gchar * source,
+   tcc_set_options (state,
+       "-Wall "
+       "-Werror "
+-      "-isystem /frida "
+-      "-isystem /frida/capstone "
++      "-isystem /sysinc "
++      "-isystem /sysinc/capstone "
+       "-nostdinc "
+       "-nostdlib"
+   );
+@@ -674,8 +674,8 @@ gum_tcc_cmodule_load_header (void * opaque,
+   guint i;
+ 
+   name = path;
+-  if (g_str_has_prefix (name, "/frida/"))
+-    name += 7;
++  if (g_str_has_prefix (name, "/sysinc/"))
++    name += 8;
+ 
+   for (i = 0; i != G_N_ELEMENTS (gum_cmodule_headers); i++)
+   {

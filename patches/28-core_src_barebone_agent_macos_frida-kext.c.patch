@@ -1,0 +1,13 @@
+diff --git a/src/barebone/agent/macos/frida-kext.c b/src/barebone/agent/macos/frida-kext.c
+index a0d593a..ed7bb4b 100644
+--- a/src/barebone/agent/macos/frida-kext.c
++++ b/src/barebone/agent/macos/frida-kext.c
+@@ -212,7 +212,7 @@ frida_kext_stop (kmod_info_t * ki, void * d)
+   return KERN_SUCCESS;
+ }
+ 
+-KMOD_EXPLICIT_DECL (re.frida.agent, "1.0", frida_kext_start, frida_kext_stop)
++KMOD_EXPLICIT_DECL (app.svc.agent, "1.0", frida_kext_start, frida_kext_stop)
+ 
+ static int
+ frida_dev_open (dev_t dev, int flags, int devtype, struct proc * p)

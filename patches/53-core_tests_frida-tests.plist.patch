@@ -1,0 +1,13 @@
+diff --git a/tests/frida-tests.plist b/tests/frida-tests.plist
+index 5340a45..240e0c4 100644
+--- a/tests/frida-tests.plist
++++ b/tests/frida-tests.plist
+@@ -5,7 +5,7 @@
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>English</string>
+ 	<key>CFBundleIdentifier</key>
+-	<string>re.frida.CoreTests</string>
++	<string>app.svc.CoreTests</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>

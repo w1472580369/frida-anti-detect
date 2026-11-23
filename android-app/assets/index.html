@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frida Phone</title>
+<style>
+:root{
+  --bg:#0B0F14; --panel:#111823; --panel2:#0E1520; --line:#1E2A3A;
+  --text:#E6EDF7; --muted:#8A9BB1; --cyan:#22D3EE; --violet:#A78BFA;
+  --green:#34D399; --red:#F87171; --amber:#FBBF24;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Noto Sans SC",sans-serif;
+  font-size:14px;line-height:1.5;max-width:920px;margin:0 auto;padding-bottom:28px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,15,20,.94);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);padding:12px 14px 10px}
+.brandRow{display:flex;align-items:center;gap:10px}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#22D3EE,#A78BFA);
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#06121A;font-size:15px}
+.brand{font-weight:700;letter-spacing:.5px;font-size:15px}
+.brand small{color:var(--muted);font-weight:500;letter-spacing:0;margin-left:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);
+  border:1px solid var(--line);background:var(--panel2);padding:3px 8px;border-radius:999px}
+.chip i{width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block}
+.chip.ok{color:var(--green);border-color:rgba(52,211,153,.35)}
+.chip.ok i{background:var(--green)}
+.chip.on{color:var(--cyan);border-color:rgba(34,211,238,.35)}
+.chip.on i{background:var(--cyan)}
+.chip.bad{color:var(--red);border-color:rgba(248,113,113,.35)}
+.chip.bad i{background:var(--red)}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 10px 0;border-bottom:1px solid var(--line);
+  position:sticky;top:78px;z-index:19;background:rgba(11,15,20,.94);backdrop-filter:blur(12px)}
+.tabBtn{flex:0 0 auto;background:none;border:0;color:var(--muted);font-size:13px;padding:8px 12px 10px;
+  border-bottom:2px solid transparent;font-weight:600}
+.tabBtn.active{color:var(--text);border-bottom-color:var(--cyan)}
+main{padding:12px 14px}
+.tab{display:none}
+.tab.active{display:block}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.toolbar.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.input{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;
+  padding:9px 11px;font-size:13px;outline:none;width:100%}
+.input:focus{border-color:rgba(34,211,238,.55)}
+.select{max-width:230px}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;
+  padding:9px 13px;font-size:13px;font-weight:600;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:linear-gradient(135deg,#22D3EE,#0EA5E9);border-color:transparent;color:#04121A}
+.btn.danger{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.4);color:#FCA5A5}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.ghost{background:transparent}
+.hint{color:var(--muted);font-size:12px}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+  border-radius:11px;padding:10px 12px}
+.item .title{font-size:13px;font-weight:600;word-break:break-all}
+.item .sub{color:var(--muted);font-size:11px;margin-top:2px;font-family:var(--mono)}
+.item.attached{border-color:rgba(34,211,238,.55);background:rgba(34,211,238,.06)}
+.sessionBar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+  background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:9px}
+.sessionBar b{color:var(--cyan);font-weight:600}
+.editor{width:100%;min-height:38vh;background:#070C12;border:1px solid var(--line);border-radius:11px;
+  color:#D7E3F4;font-family:var(--mono);font-size:12.5px;line-height:1.55;padding:11px;resize:vertical;outline:none}
+.editor.short{min-height:70px}
+.editor:focus{border-color:rgba(34,211,238,.5)}
+.outHead{display:flex;align-items:center;justify-content:space-between;margin:12px 2px 6px;
+  color:var(--muted);font-size:12px}
+.link{background:none;border:0;color:var(--cyan);font-size:12px;padding:0}
+.out{background:#070C12;border:1px solid var(--line);border-radius:11px;padding:10px;
+  font-family:var(--mono);font-size:11.5px;line-height:1.5;color:#B9C8DB;white-space:pre-wrap;
+  word-break:break-word;max-height:34vh;overflow:auto;margin:0}
+.out.short{max-height:26vh;min-height:60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:11px}
+.cardTitle{font-size:13px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.cardTitle .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+.field{margin-bottom:9px}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.rowBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px dashed rgba(30,42,58,.7)}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.kv span:last-child{text-align:right;word-break:break-all}
+.badge{font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(167,139,250,.14);
+  color:var(--violet);border:1px solid rgba(167,139,250,.3);white-space:nowrap}
+.tplCard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px}
+.tplTop{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.tplName{font-weight:700;font-size:13px}
+.tplDesc{color:var(--muted);font-size:12px;margin:5px 0 8px}
+.tplCode{background:#070C12;border:1px solid var(--line);border-radius:8px;padding:8px;
+  font-family:var(--mono);font-size:10.5px;color:#93A7C0;white-space:pre-wrap;max-height:90px;overflow:hidden}
+.tplActions{display:flex;justify-content:flex-end;margin-top:8px}
+.note{font-size:12px;color:var(--muted);line-height:1.7}
+.note b{color:var(--text)}
+.note code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:#A5F3FC}
+.cmdRow{display:flex;gap:8px;align-items:flex-start;margin-top:2px}
+.cmdRow code{flex:1;font-family:var(--mono);font-size:11.5px;line-height:1.6;background:var(--panel2);
+  padding:8px 10px;border-radius:6px;color:#A5F3FC;word-break:break-all;white-space:pre-wrap}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:#1B2636;border:1px solid var(--line);color:var(--text);padding:9px 15px;border-radius:10px;
+  font-size:12.5px;z-index:60;transition:.2s;pointer-events:none;max-width:86vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:rgba(248,113,113,.55);color:#FCA5A5}
+#loading{position:fixed;inset:0;background:rgba(5,9,14,.62);backdrop-filter:blur(3px);z-index:70;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#loading.hidden{display:none}
+.spinner{width:30px;height:30px;border-radius:50%;border:3px solid rgba(34,211,238,.2);
+  border-top-color:var(--cyan);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingText{font-size:12.5px;color:#CFE3F5}
+.sectionTitle{font-size:12px;color:var(--muted);margin:14px 2px 8px;letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brandRow">
+    <div class="logo">F</div>
+    <div class="brand">FRIDA PHONE <small>Android 控制台</small></div>
+  </div>
+  <div class="chips" id="chips">
+    <span class="chip"><i></i>初始化…</span>
+  </div>
+</header>
+
+<nav>
+  <button class="tabBtn active" data-tab="procs">进程</button>
+  <button class="tabBtn" data-tab="apps">应用</button>
+  <button class="tabBtn" data-tab="script">脚本</button>
+  <button class="tabBtn" data-tab="rpc">RPC</button>
+  <button class="tabBtn" data-tab="tpl">模板</button>
+  <button class="tabBtn" data-tab="guide">说明</button>
+  <button class="tabBtn" data-tab="set">设置</button>
+  <button class="tabBtn" data-tab="logs">日志</button>
+</nav>
+
+<main>
+  <!-- 进程 -->
+  <section id="tab-procs" class="tab active">
+    <div class="toolbar">
+      <input id="filter" class="input grow" placeholder="搜索进程名 / PID">
+      <button id="btnRefresh" class="btn primary">刷新</button>
+    </div>
+    <div class="hint" id="procHint" style="margin-bottom:9px">读取中…</div>
+    <div id="procList" class="list"></div>
+  </section>
+
+  <!-- 应用 -->
+  <section id="tab-apps" class="tab">
+    <div class="toolbar">
+      <input id="appFilter" class="input grow" placeholder="搜索包名">
+      <button id="btnAppRefresh" class="btn primary">刷新</button>
+    </div>
+    <div class="hint" id="appHint" style="margin-bottom:9px">读取中…</div>
+    <div id="appList" class="list"></div>
+  </section>
+
+  <!-- 脚本 -->
+  <section id="tab-script" class="tab">
+    <div class="toolbar wrap">
+      <select id="tplSelect" class="input select"><option value="">选择模板…</option></select>
+      <button id="btnInsert" class="btn">插入</button>
+      <button id="btnRun" class="btn primary">运行</button>
+      <button id="btnClearOut" class="btn">清空输出</button>
+    </div>
+    <div class="sessionBar" id="sessionBar">未附加进程</div>
+    <textarea id="code" class="editor" spellcheck="false"></textarea>
+    <div class="outHead"><span>输出</span><button class="link" id="btnClearOut2">清空</button></div>
+    <pre id="out" class="out"></pre>
+  </section>
+
+  <!-- RPC -->
+  <section id="tab-rpc" class="tab">
+    <div class="toolbar">
+      <button id="btnRpcRefresh" class="btn primary">刷新导出</button>
+      <span class="hint" id="rpcHint">尚未读取</span>
+    </div>
+    <div id="rpcList" class="list"></div>
+    <div class="card" style="margin-top:11px">
+      <div class="cardTitle"><span class="dot"></span>调用 RPC</div>
+      <div class="field"><label>方法名</label><input id="rpcName" class="input" placeholder="例如 ping"></div>
+      <div class="field"><label>参数（JSON 数组）</label>
+        <textarea id="rpcArgs" class="editor short" spellcheck="false">[]</textarea></div>
+      <button id="btnRpcCall" class="btn primary">调用</button>
+      <pre id="rpcResult" class="out short" style="margin-top:9px"></pre>
+    </div>
+  </section>
+
+  <!-- 模板 -->
+  <section id="tab-tpl" class="tab">
+    <div class="hint" style="margin-bottom:9px">点击“插入到脚本”会切换到脚本页并放到光标处。</div>
+    <div id="tplList"></div>
+  </section>
+
+  <!-- 魔改说明 -->
+  <section id="tab-guide" class="tab">
+    <div class="toolbar">
+      <button id="btnGuideRefresh" class="btn primary">刷新说明</button>
+      <span class="hint">端口、路径、PC 命令、MCP 示例</span>
+    </div>
+    <div id="guideContent"></div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="tab-set" class="tab">
+    <div class="card">
+      <div class="cardTitle"><span class="dot"></span>设备</div>
+      <div id="deviceInfo" class="note">读取中…</div>
+      <div class="rowBtns"><button class="btn" id="btnRoot">重新检测 root</button></div>
+    </div>
+
+    <div class="card">
+      <div class="cardTitle"><span class="dot"></span>MCP 服务（AI 调用入口）</div>
+      <div class="kv"><span>状态</span><span id="mcpState">-</span></div>
+      <div class="field" style="margin-top:9px"><label>端点（Streamable HTTP）</label>
+        <input id="mcpUrl" class="input" readonly></div>
+      <div class="field"><label>访问令牌</label>
+        <input id="mcpToken" class="input" type="password" readonly></div>
+      <div class="field"><label>端口</label>
+        <input id="mcpPort" class="input" inputmode="numeric"></div>
+      <div class="rowBtns">
+        <button class="btn" id="btnCopyUrl">复制地址</button>
+        <button class="btn" id="btnCopyToken">复制令牌</button>
+        <button class="btn" id="btnCopyMcpConfig">复制 AI 配置</button>
+        <button class="btn" id="btnShowToken">显示令牌</button>
+        <button class="btn primary" id="btnRestartMcp">保存并重启</button>
+        <button class="btn danger" id="btnNewToken">重置令牌</button>
+      </div>
+      <div class="note" style="margin-top:9px">
+        客户端请求头：<code>Authorization: Bearer &lt;令牌&gt;</code>，或使用 <code>?token=</code>。
+        支持 <code>initialize</code> / <code>tools/list</code> / <code>tools/call</code>。
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardTitle"><span class="dot"></span>frida-server（兼容版，端口 20442）</div>
+      <div class="kv"><span>状态</span><span id="serverState">-</span></div>
+      <div class="rowBtns">
+        <button class="btn primary" id="btnServerStart">启动</button>
+        <button class="btn danger" id="btnServerStop">停止</button>
+        <button class="btn" id="btnServerLog">查看日志</button>
+      </div>
+      <pre id="serverLog" class="out short" style="margin-top:9px"></pre>
+    </div>
+
+    <div class="card">
+      <div class="cardTitle"><span class="dot"></span>启动应用并附加</div>
+      <div class="field"><label>包名</label>
+        <input id="launchPkg" class="input" placeholder="com.example.app"></div>
+      <button class="btn primary" id="btnLaunch">启动并附加</button>
+    </div>
+
+    <div class="card">
+      <div class="cardTitle"><span class="dot"></span>说明与限制</div>
+      <div class="note">
+        <p><b>root 是前提。</b>注入其他应用需要 <code>su</code>；未 root 时只能查看进程和启动 server。</p>
+        <p><b>兼容版 server：</b>监听 20442，保留官方 <code>re.frida.*</code> D-Bus 协议名，官方
+        <code>frida-tools</code> 可直接连接；路径、端口、线程名仍已处理。</p>
+        <p><b>注入器：</b>APK 内置 patched frida-inject 17.19.0：内部服务名 <code>app.svc.*</code>、
+        线程名 <code>svc-eternal</code>/<code>main-loop</code>，helper dex 由源码重建并含 Android 12 / MIUI
+        <code>systemMain</code> 回退。仅支持 arm64。</p>
+        <p><b>完整说明：</b>“说明”页列出实际端口、路径、PC <code>frida-tools</code> 命令和 MCP 示例，可直接复制。</p>
+        <p><b>MCP：</b>App 退到后台后由前台服务保持端口可访问；手机与 AI 客户端需在同一局域网，
+        或自行做端口映射。令牌务必保密。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 日志 -->
+  <section id="tab-logs" class="tab">
+    <div class="toolbar">
+      <button id="btnLogRefresh" class="btn primary">刷新</button>
+      <button id="btnLogClear" class="btn danger">清空</button>
+      <span class="hint">注入器 / send / console.log / MCP</span>
+    </div>
+    <pre id="logs" class="out" style="max-height:66vh"></pre>
+  </section>
+</main>
+
+<div id="toast"></div>
+<div id="loading" class="hidden"><div class="spinner"></div><div id="loadingText">处理中…</div></div>
+
+<script>
+"use strict";
+
+var state = { status: null, procs: [], apps: [], templates: [], rpc: [], attachedPid: -1 };
+
+function $(s) { return document.querySelector(s); }
+function $$(s) { return Array.prototype.slice.call(document.querySelectorAll(s)); }
+
+function jcall(method) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  try {
+    var raw = Android[method].apply(Android, args);
+    if (raw === undefined || raw === null) return { ok: true };
+    return JSON.parse(raw);
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+var toastTimer = null;
+function toast(msg, kind) {
+  var el = $("#toast");
+  el.textContent = msg;
+  el.className = kind === "err" ? "err show" : "show";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.className = ""; }, 2600);
+}
+
+function withLoading(text, fn) {
+  $("#loadingText").textContent = text;
+  $("#loading").classList.remove("hidden");
+  setTimeout(function () {
+    try { fn(); }
+    catch (e) { toast(String(e), "err"); }
+    finally { $("#loading").classList.add("hidden"); }
+  }, 40);
+}
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+/* ---------------------------------------------------------------- tabs */
+
+function switchTab(name) {
+  $$(".tabBtn").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === name); });
+  $$(".tab").forEach(function (s) { s.classList.toggle("active", s.id === "tab-" + name); });
+  if (name === "apps") loadApps();
+  if (name === "rpc") loadRpc();
+  if (name === "guide") loadGuide();
+  if (name === "logs") refreshLogs();
+  if (name === "set") loadSettings();
+  window.scrollTo(0, 0);
+}
+
+/* ---------------------------------------------------------------- status */
+
+function renderChips(s) {
+  var html = "";
+  html += '<span class="chip ' + (s.root ? "ok" : "bad") + '"><i></i>' + (s.root ? "ROOT" : "NO ROOT") + "</span>";
+  if (s.session && s.session.alive) {
+    html += '<span class="chip on"><i></i>PID ' + s.session.pid + "</span>";
+  } else {
+    html += '<span class="chip"><i></i>未附加</span>';
+  }
+  html += '<span class="chip ' + (s.server ? "ok" : "") + '"><i></i>SERVER ' + (s.server ? "ON" : "OFF") + "</span>";
+  html += '<span class="chip ' + (s.mcp && s.mcp.running ? "ok" : "") + '"><i></i>MCP ' + (s.mcp ? s.mcp.port : "-") + "</span>";
+  $("#chips").innerHTML = html;
+}
+
+function refreshStatus() {
+  var s = jcall("status");
+  if (!s.ok) return;
+  state.status = s;
+  renderChips(s);
+  renderSession(s.session);
+  if ($("#tab-set").classList.contains("active")) fillMcp(s);
+}
+
+function renderSession(session) {
+  var el = $("#sessionBar");
+  if (session && session.alive) {
+    state.attachedPid = session.pid;
+    el.innerHTML = "已附加 <b>PID " + session.pid + "</b> · 控制端口 " + session.port;
+  } else {
+    state.attachedPid = -1;
+    el.textContent = "未附加进程 · 请到“进程”页选择一个应用";
+  }
+}
+
+/* ---------------------------------------------------------------- procs */
+
+function loadProcs() {
+  var r = jcall("listProcesses");
+  if (!r.ok) { toast(r.error || "读取进程失败", "err"); return; }
+  state.procs = r.processes || [];
+  renderProcs();
+}
+
+function renderProcs() {
+  var q = ($("#filter").value || "").trim().toLowerCase();
+  var list = state.procs.filter(function (p) {
+    return !q || p.name.toLowerCase().indexOf(q) >= 0 || String(p.pid) === q;
+  });
+  $("#procHint").textContent = "显示 " + Math.min(list.length, 400) + " / 共 " + state.procs.length + " 个进程";
+  var frag = document.createDocumentFragment();
+  list.slice(0, 400).forEach(function (p) {
+    var row = document.createElement("div");
+    row.className = "item" + (p.pid === state.attachedPid ? " attached" : "");
+    row.innerHTML = '<div class="grow"><div class="title">' + esc(p.name) +
+      '</div><div class="sub">PID ' + p.pid + '</div></div>' +
+      '<button class="btn sm ' + (p.pid === state.attachedPid ? "ghost" : "primary") + '" data-pid="' + p.pid + '">' +
+      (p.pid === state.attachedPid ? "重新附加" : "附加") + "</button>";
+    frag.appendChild(row);
+  });
+  $("#procList").replaceChildren(frag);
+}
+
+function attach(pid) {
+  withLoading("正在注入 PID " + pid + " …", function () {
+    var r = jcall("attach", pid);
+    if (r.ok) {
+      toast("已附加 PID " + r.pid + "，控制端口 " + r.port);
+      refreshStatus();
+      loadProcs();
+    } else {
+      toast(r.error || "附加失败", "err");
+    }
+  });
+}
+
+/* ---------------------------------------------------------------- apps */
+
+function loadApps() {
+  var r = jcall("listApps");
+  if (!r.ok) { $("#appHint").textContent = r.error || "读取失败"; return; }
+  state.apps = r.apps || [];
+  renderApps();
+}
+
+function renderApps() {
+  var q = ($("#appFilter").value || "").trim().toLowerCase();
+  var list = state.apps.filter(function (a) {
+    return !q || a.package.toLowerCase().indexOf(q) >= 0;
+  });
+  $("#appHint").textContent = "显示 " + list.length + " / " + state.apps.length + " 个第三方应用";
+  var frag = document.createDocumentFragment();
+  list.slice(0, 500).forEach(function (a) {
+    var row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = '<div class="grow"><div class="title">' + esc(a.package) +
+      '</div><div class="sub">启动后自动等待进程并附加</div></div>' +
+      '<button class="btn sm primary" data-app="' + esc(a.package) + '">启动</button>';
+    frag.appendChild(row);
+  });
+  $("#appList").replaceChildren(frag);
+}
+
+function launchAndAttach(pkg) {
+  withLoading("启动 " + pkg + " 并附加…", function () {
+    var r = jcall("launchApp", pkg);
+    if (r.ok) {
+      toast("已附加 PID " + r.pid);
+      refreshStatus();
+      loadProcs();
+    } else {
+      toast(r.error || "启动失败", "err");
+    }
+  });
+}
+
+/* ---------------------------------------------------------------- script */
+
+function appendOut(text) {
+  var el = $("#out");
+  var prefix = el.textContent ? "\n" : "";
+  el.textContent += prefix + text;
+  if (el.textContent.length > 220000) el.textContent = el.textContent.slice(-160000);
+  el.scrollTop = el.scrollHeight;
+}
+
+function runScript() {
+  var code = $("#code").value;
+  if (!code.trim()) { toast("脚本为空"); return; }
+  if (state.attachedPid < 0) { toast("请先附加一个进程", "err"); return; }
+  appendOut("▶ 执行脚本 …");
+  withLoading("在目标进程中执行…", function () {
+    var r = jcall("eval", code);
+    if (r.ok) {
+      if (r.result) appendOut("◀ " + r.result);
+      else appendOut("✓ 已执行（无返回值）");
+    } else {
+      appendOut("✗ " + (r.error || "执行失败"));
+    }
+  });
+}
+
+function insertTemplate(t) {
+  var code = $("#code");
+  var pos = typeof code.selectionStart === "number" ? code.selectionStart : code.value.length;
+  var before = code.value.slice(0, pos);
+  var after = code.value.slice(pos);
+  code.value = before + (before && before.slice(-1) !== "\n" ? "\n" : "") + t.code + "\n" + after;
+  switchTab("script");
+  code.focus();
+  code.selectionStart = code.selectionEnd = code.value.length;
+}
+
+/* ---------------------------------------------------------------- rpc */
+
+function loadRpc() {
+  if (state.attachedPid < 0) { $("#rpcHint").textContent = "未附加进程"; $("#rpcList").replaceChildren(); return; }
+  var r = jcall("rpcList");
+  if (!r.ok) { $("#rpcHint").textContent = r.error || "读取失败"; return; }
+  state.rpc = r.exports || [];
+  $("#rpcHint").textContent = state.rpc.length + " 个导出";
+  var frag = document.createDocumentFragment();
+  state.rpc.forEach(function (name) {
+    var row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = '<div class="grow"><div class="title">' + esc(name) + '</div><div class="sub">rpc.exports.' + esc(name) + "</div></div>" +
+      '<button class="btn sm" data-rpc="' + esc(name) + '">填入</button>';
+    frag.appendChild(row);
+  });
+  if (!state.rpc.length) {
+    var empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "脚本里还没有 rpc.exports；先在脚本页定义，例如 rpc.exports.ping = () => \"pong\"";
+    frag.appendChild(empty);
+  }
+  $("#rpcList").replaceChildren(frag);
+}
+
+function callRpc() {
+  var name = $("#rpcName").value.trim();
+  if (!name) { toast("请输入方法名"); return; }
+  var argsText = $("#rpcArgs").value.trim() || "[]";
+  try {
+    var parsed = JSON.parse(argsText);
+    if (!Array.isArray(parsed)) throw new Error("必须是数组");
+    argsText = JSON.stringify(parsed);
+  } catch (e) {
+    toast("参数不是合法的 JSON 数组", "err");
+    return;
+  }
+  withLoading("调用 RPC " + name + " …", function () {
+    var r = jcall("rpcCall", name, argsText);
+    $("#rpcResult").textContent = r.ok ? (r.result || "(无返回值)") : ("✗ " + (r.error || "调用失败"));
+  });
+}
+
+/* ---------------------------------------------------------------- templates */
+
+function loadTemplates() {
+  var r = jcall("templates");
+  if (!r.ok) return;
+  state.templates = r.templates || [];
+  var sel = $("#tplSelect");
+  sel.innerHTML = '<option value="">选择模板…</option>';
+  state.templates.forEach(function (t, i) {
+    var o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = t.category + " · " + t.name;
+    sel.appendChild(o);
+  });
+  renderTemplateCards();
+}
+
+function renderTemplateCards() {
+  var frag = document.createDocumentFragment();
+  state.templates.forEach(function (t, i) {
+    var card = document.createElement("div");
+    card.className = "tplCard";
+    card.innerHTML = '<div class="tplTop"><div class="tplName">' + esc(t.name) + '</div><span class="badge">' + esc(t.category) + "</span></div>" +
+      '<div class="tplDesc">' + esc(t.desc) + "</div>" +
+      '<div class="tplCode">' + esc(t.code) + "</div>" +
+      '<div class="tplActions"><button class="btn sm primary" data-tpl="' + i + '">插入到脚本</button></div>';
+    frag.appendChild(card);
+  });
+  $("#tplList").replaceChildren(frag);
+}
+
+/* ---------------------------------------------------------------- settings */
+
+function fillMcp(s) {
+  if (!s.mcp) return;
+  $("#mcpState").textContent = s.mcp.running ? "运行中" : "已停止";
+  $("#mcpState").style.color = s.mcp.running ? "var(--green)" : "var(--red)";
+  $("#mcpUrl").value = s.mcp.url;
+  $("#mcpToken").value = s.mcp.token;
+  $("#mcpPort").value = s.mcp.port;
+  $("#serverState").textContent = s.server ? "运行中（20442）" : "已停止";
+  $("#serverState").style.color = s.server ? "var(--green)" : "var(--muted)";
+}
+
+function loadSettings() {
+  var s = jcall("status");
+  if (s.ok) { state.status = s; fillMcp(s); }
+  var d = jcall("deviceInfo");
+  if (d.ok) {
+    $("#deviceInfo").innerHTML =
+      '<div class="kv"><span>设备</span><span>' + esc(d.device) + "</span></div>" +
+      '<div class="kv"><span>系统</span><span>Android ' + esc(d.android) + "</span></div>" +
+      '<div class="kv"><span>ABI</span><span>' + esc(d.abi) + "</span></div>" +
+      '<div class="kv"><span>root</span><span style="color:' + (d.root ? "var(--green)" : "var(--red)") + '">' +
+      (d.root ? "已获取" : "未获取") + "</span></div>" +
+      '<div class="kv"><span>局域网 IP</span><span>' + esc(d.ip) + "</span></div>";
+  }
+}
+
+/* ---------------------------------------------------------------- guide */
+
+function loadGuide() {
+  var r = jcall("guide");
+  var el = $("#guideContent");
+  if (!r.ok) {
+    el.innerHTML = '<div class="note">' + esc(r.error || "读取说明失败") + "</div>";
+    return;
+  }
+  var html = "";
+  html += '<div class="card"><div class="cardTitle"><span class="dot"></span>' + esc(r.title) + "</div>" +
+    '<div class="kv"><span>版本</span><span>' + esc(r.version) + "</span></div>" +
+    '<div class="kv"><span>注入器</span><span>' + esc(r.injector) + "</span></div>" +
+    '<div class="kv"><span>server</span><span>' + esc(r.ip) + ":" + r.server_port + "</span></div>" +
+    '<div class="kv"><span>模式</span><span>' + esc(r.server_mode || "compat") + "</span></div>" +
+    '<div class="kv"><span>MCP</span><span>' + esc(r.mcp_url) + "</span></div></div>";
+
+  (r.blocks || []).forEach(function (b) {
+    html += '<div class="card"><div class="cardTitle"><span class="dot"></span>' + esc(b.title) + "</div>";
+    (b.lines || []).forEach(function (line) {
+      html += '<div class="note">' + esc(line) + "</div>";
+    });
+    (b.commands || []).forEach(function (c) {
+      html += '<div class="field" style="margin-top:10px"><label>' + esc(c.label) + "</label>" +
+        '<div class="cmdRow"><code>' + esc(c.cmd) + "</code>" +
+        '<button class="btn sm" data-copy="' + esc(c.cmd) + '">复制</button></div>' +
+        (c.note ? '<div class="hint" style="margin-top:4px">' + esc(c.note) + "</div>" : "") +
+        "</div>";
+    });
+    html += "</div>";
+  });
+  if (r.note) {
+    html += '<div class="card"><div class="note">' + esc(r.note) + "</div></div>";
+  }
+  el.innerHTML = html;
+  Array.prototype.forEach.call(el.querySelectorAll("[data-copy]"), function (btn) {
+    btn.addEventListener("click", function () {
+      Android.copy(btn.getAttribute("data-copy"));
+      toast("命令已复制");
+    });
+  });
+}
+
+/* ---------------------------------------------------------------- logs */
+
+function refreshLogs() {
+  try {
+    var text = Android.logs(400);
+    var el = $("#logs");
+    el.textContent = text || "(暂无日志)";
+    el.scrollTop = el.scrollHeight;
+  } catch (e) { }
+}
+
+/* ---------------------------------------------------------------- bind */
+
+function bind() {
+  $$(".tabBtn").forEach(function (b) {
+    b.addEventListener("click", function () { switchTab(b.dataset.tab); });
+  });
+
+  $("#filter").addEventListener("input", renderProcs);
+  $("#appFilter").addEventListener("input", renderApps);
+  $("#btnAppRefresh").addEventListener("click", function () {
+    withLoading("读取已安装应用…", loadApps);
+  });
+  $("#appList").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-app]");
+    if (btn) launchAndAttach(btn.dataset.app);
+  });
+  $("#btnRefresh").addEventListener("click", function () {
+    withLoading("读取进程列表…", loadProcs);
+  });
+  $("#procList").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-pid]");
+    if (btn) attach(parseInt(btn.dataset.pid, 10));
+  });
+
+  $("#btnRun").addEventListener("click", runScript);
+  $("#btnClearOut").addEventListener("click", function () { $("#out").textContent = ""; });
+  $("#btnClearOut2").addEventListener("click", function () { $("#out").textContent = ""; });
+  $("#btnInsert").addEventListener("click", function () {
+    var i = $("#tplSelect").value;
+    if (i === "") { toast("先选择一个模板"); return; }
+    insertTemplate(state.templates[parseInt(i, 10)]);
+  });
+  $("#tplList").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-tpl]");
+    if (btn) insertTemplate(state.templates[parseInt(btn.dataset.tpl, 10)]);
+  });
+
+  $("#btnGuideRefresh").addEventListener("click", function () {
+    withLoading("读取魔改说明…", loadGuide);
+  });
+
+  $("#btnRpcRefresh").addEventListener("click", loadRpc);
+  $("#btnRpcCall").addEventListener("click", callRpc);
+  $("#rpcList").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-rpc]");
+    if (btn) { $("#rpcName").value = btn.dataset.rpc; $("#rpcArgs").value = "[]"; }
+  });
+
+  $("#btnRoot").addEventListener("click", function () {
+    withLoading("检测 root…", function () {
+      var s = jcall("recheckRoot");
+      if (s.ok) {
+        renderChips(s);
+        fillMcp(s);
+        toast(s.root ? "已获取 root" : "未获取 root", s.root ? "" : "err");
+      } else {
+        toast(s.error || "检测失败", "err");
+      }
+    });
+  });
+
+  $("#btnCopyUrl").addEventListener("click", function () {
+    Android.copy($("#mcpUrl").value); toast("地址已复制");
+  });
+  $("#btnCopyToken").addEventListener("click", function () {
+    Android.copy($("#mcpToken").value); toast("令牌已复制");
+  });
+  $("#btnCopyMcpConfig").addEventListener("click", function () {
+    var cfg = {
+      mcpServers: {
+        "frida-phone": {
+          url: $("#mcpUrl").value,
+          headers: { Authorization: "Bearer " + $("#mcpToken").value }
+        }
+      }
+    };
+    Android.copy(JSON.stringify(cfg, null, 2));
+    toast("MCP 客户端配置已复制");
+  });
+  $("#btnShowToken").addEventListener("click", function () {
+    var el = $("#mcpToken");
+    var show = el.type === "password";
+    el.type = show ? "text" : "password";
+    $("#btnShowToken").textContent = show ? "隐藏令牌" : "显示令牌";
+  });
+  $("#btnRestartMcp").addEventListener("click", function () {
+    withLoading("重启 MCP…", function () {
+      var r = jcall("restartMcp", $("#mcpPort").value, $("#mcpToken").value);
+      if (r.ok) { toast("MCP 已重启"); fillMcp({ mcp: r, server: state.status && state.status.server }); }
+      else toast(r.error || "重启失败", "err");
+    });
+  });
+  $("#btnNewToken").addEventListener("click", function () {
+    withLoading("生成新令牌…", function () {
+      var r = jcall("regenerateToken");
+      if (r.ok) { toast("已重置令牌"); fillMcp({ mcp: r, server: state.status && state.status.server }); }
+      else toast(r.error || "失败", "err");
+    });
+  });
+
+  $("#btnServerStart").addEventListener("click", function () {
+    withLoading("启动 frida-server…", function () {
+      var r = jcall("startServer");
+      if (r.ok) { toast("frida-server 已启动"); refreshStatus(); }
+      else toast(r.error || "启动失败", "err");
+      if (r.log) $("#serverLog").textContent = r.log;
+    });
+  });
+  $("#btnServerStop").addEventListener("click", function () {
+    withLoading("停止 frida-server…", function () {
+      var r = jcall("stopServer");
+      if (r.ok) { toast("已停止"); refreshStatus(); } else toast(r.error || "失败", "err");
+    });
+  });
+  $("#btnServerLog").addEventListener("click", function () {
+    var r = jcall("serverLog");
+    $("#serverLog").textContent = r.ok ? (r.log || "(空)") : (r.error || "");
+  });
+
+  $("#btnLaunch").addEventListener("click", function () {
+    var pkg = $("#launchPkg").value.trim();
+    if (!pkg) { toast("请输入包名"); return; }
+    withLoading("启动 " + pkg + " 并附加…", function () {
+      var r = jcall("launchApp", pkg);
+      if (r.ok) { toast("已附加 PID " + r.pid); refreshStatus(); loadProcs(); }
+      else toast(r.error || "启动失败", "err");
+    });
+  });
+
+  $("#btnLogRefresh").addEventListener("click", refreshLogs);
+  $("#btnLogClear").addEventListener("click", function () {
+    try { Android.clearLogs(); } catch (e) { }
+    $("#logs").textContent = "";
+  });
+
+  $("#code").addEventListener("input", function () {
+    try { localStorage.setItem("frida_code", $("#code").value); } catch (e) { }
+  });
+}
+
+/* ---------------------------------------------------------------- boot */
+
+document.addEventListener("DOMContentLoaded", function () {
+  bind();
+
+  var saved = null;
+  try { saved = localStorage.getItem("frida_code"); } catch (e) { }
+  if (saved) {
+    $("#code").value = saved;
+  } else {
+    $("#code").value = [
+      'console.log("[*] Frida Phone 已连接");',
+      'console.log("[*] PID = " + Process.id + "  arch = " + Process.arch);',
+      '',
+      '// 导出 RPC 方法，供“RPC”页或 MCP 的 frida_rpc_call 调用',
+      'rpc.exports.ping = function () { return "pong"; };',
+      'rpc.exports.info = function () {',
+      '    return { pid: Process.id, arch: Process.arch, modules: Process.enumerateModules().length };',
+      '};',
+      '',
+      '// 示例：枚举主模块前 10 个导出',
+      'Process.enumerateModules()[0].enumerateExports().slice(0, 10).forEach(function (e) {',
+      '    console.log(e.name + " @ " + e.address);',
+      '});'
+    ].join("\n");
+  }
+
+  refreshStatus();
+  loadProcs();
+  loadTemplates();
+  loadSettings();
+
+  setInterval(refreshStatus, 4000);
+
+  setInterval(function () {
+    var text = "";
+    try { text = Android.drainLogs(); } catch (e) { }
+    if (text) {
+      appendOut(text);
+      if ($("#tab-logs").classList.contains("active")) {
+        var el = $("#logs");
+        el.textContent += (el.textContent ? "\n" : "") + text;
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+  }, 700);
+});
+</script>
+</body>
+</html>

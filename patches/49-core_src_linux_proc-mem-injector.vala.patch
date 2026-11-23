@@ -1,0 +1,13 @@
+diff --git a/src/linux/proc-mem-injector.vala b/src/linux/proc-mem-injector.vala
+index 2b3ecff..796db86 100644
+--- a/src/linux/proc-mem-injector.vala
++++ b/src/linux/proc-mem-injector.vala
+@@ -970,7 +970,7 @@ namespace Frida {
+ 		}
+ 
+ 		private static string make_fallback_address () {
+-			return "/frida-" + Uuid.string_random ();
++			return "/svc-" + Uuid.string_random ();
+ 		}
+ 
+ 		private static uint8[] make_cstring (string str) {

@@ -1,0 +1,7 @@
+dist/
+toolchain/
+frida/build/
+frida/build-*/
+android-app/build/
+__pycache__/
+*.pyc

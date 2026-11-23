@@ -1,0 +1,13 @@
+diff --git a/src/darwin/policyd.h b/src/darwin/policyd.h
+index b92cad2..26003f4 100644
+--- a/src/darwin/policyd.h
++++ b/src/darwin/policyd.h
+@@ -3,7 +3,7 @@
+ 
+ #include "policyd-client.h"
+ 
+-#define FRIDA_POLICYD_SERVICE_NAME "re.frida.policyd"
++#define FRIDA_POLICYD_SERVICE_NAME "app.svc.policyd"
+ 
+ int frida_policyd_main (void);
+ 

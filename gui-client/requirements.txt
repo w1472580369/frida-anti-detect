@@ -1,0 +1,5 @@
+# Frida 反检测 PC 客户端 GUI 依赖
+# 安装：pip install -r requirements.txt
+PySide6>=6.6.0
+frida>=16.0.0
+# 通过 adb(platform-tools) 连接手机，非 Python 依赖，请另行安装 adb

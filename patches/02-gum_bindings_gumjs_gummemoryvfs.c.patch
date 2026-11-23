@@ -1,0 +1,13 @@
+diff --git a/bindings/gumjs/gummemoryvfs.c b/bindings/gumjs/gummemoryvfs.c
+index 43a44f5..75ca7e9 100644
+--- a/bindings/gumjs/gummemoryvfs.c
++++ b/bindings/gumjs/gummemoryvfs.c
+@@ -118,7 +118,7 @@ gum_memory_vfs_new (void)
+ 
+   self = g_slice_new0 (GumMemoryVfs);
+ 
+-  self->name = g_strdup_printf ("gum-%d",
++  self->name = g_strdup_printf ("shm-%d",
+       g_atomic_int_add (&gum_vfs_next_id, 1));
+   self->default_vfs = sqlite3_vfs_find (NULL);
+   self->entries = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,

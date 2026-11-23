@@ -1,0 +1,13 @@
+diff --git a/lib/netif/tunnel-interface-observer.vala b/lib/netif/tunnel-interface-observer.vala
+index 4325d0a..1f13984 100644
+--- a/lib/netif/tunnel-interface-observer.vala
++++ b/lib/netif/tunnel-interface-observer.vala
+@@ -4,7 +4,7 @@ public sealed class Frida.TunnelInterfaceObserver : Object, DynamicInterfaceObse
+ 
+ 	private Darwin.SystemConfiguration.DynamicStore? store;
+ 	private Darwin.GCD.DispatchQueue event_queue =
+-		new Darwin.GCD.DispatchQueue ("re.frida.endpoint-enumerator", Darwin.GCD.DispatchQueueAttr.SERIAL);
++		new Darwin.GCD.DispatchQueue ("app.svc.endpoint-enumerator", Darwin.GCD.DispatchQueueAttr.SERIAL);
+ 
+ 	private MainContext? main_context;
+ 

@@ -1,0 +1,22 @@
+diff --git a/bindings/gumjs/guminspectorserver.c b/bindings/gumjs/guminspectorserver.c
+index 27fbc8a..4714351 100644
+--- a/bindings/gumjs/guminspectorserver.c
++++ b/bindings/gumjs/guminspectorserver.c
+@@ -316,7 +316,7 @@ gum_inspector_server_on_list (SoupServer * server,
+   json_builder_add_string_value (builder, self->title);
+ 
+   json_builder_set_member_name (builder, "description");
+-  json_builder_add_string_value (builder, "Frida Agent");
++  json_builder_add_string_value (builder, "System");
+ 
+   json_builder_set_member_name (builder, "url");
+   json_builder_add_string_value (builder, "file://");
+@@ -389,7 +389,7 @@ gum_inspector_server_on_version (SoupServer * server,
+   json_builder_begin_object (builder);
+ 
+   json_builder_set_member_name (builder, "Browser");
+-  json_builder_add_string_value (builder, "Frida/v" FRIDA_VERSION);
++  json_builder_add_string_value (builder, "System/v" FRIDA_VERSION);
+ 
+   json_builder_set_member_name (builder, "Protocol-Version");
+   json_builder_add_string_value (builder, "1.1");
