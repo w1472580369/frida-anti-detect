@@ -1,5 +1,9 @@
 # Frida anti-detect 魔改项目
 
+> **仓库**：https://github.com/w1472580369/frida-anti-detect（private）  
+> **Release v1.0**：https://github.com/w1472580369/frida-anti-detect/releases/tag/v1.0  
+> 含 `FridaPhone-1.0-apk.zip` 与 `frida-anti-detect-source-17.19.0.zip`。
+
 目标：修改 Frida 源码，消除市场上主流 App 的本地检测特征，并**真实构建出可直接使用的 Android frida-server**。
 
 项目提供两种 D-Bus 模式，按场景选择：
