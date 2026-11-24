@@ -309,7 +309,7 @@ public class McpServer {
         JSONObject result = new JSONObject();
         result.put("protocolVersion", version);
         result.put("capabilities", new JSONObject().put("tools", new JSONObject().put("listChanged", false)));
-        result.put("serverInfo", new JSONObject().put("name", "frida-phone").put("version", "1.1.0"));
+        result.put("serverInfo", new JSONObject().put("name", "frida-phone").put("version", "1.2.0"));
         result.put("instructions",
                 "Android 端 Frida 控制服务（APK 内置 patched frida-inject 17.19.0，仅 arm64，已修 Android 12/MIUI systemMain 兼容）。"
                         + "注入需要 root：先调用 frida_attach(pid) 或 frida_launch_app(package)，"
@@ -323,7 +323,7 @@ public class McpServer {
         JSONArray tools = new JSONArray();
 
         tools.put(tool("frida_status",
-                "查看设备 root 状态、当前附加会话、frida-server 与 MCP 服务状态；injector 字段为 patched-17.19.0-r3-miui，server_mode 为 compat。",
+                "查看设备 root 状态、当前附加会话、frida-server 与 MCP 服务状态；injector 字段为 patched-17.19.0-r4-miui-libcshim，server_mode 为 compat。",
                 new JSONObject()));
 
         tools.put(tool("frida_get_guide",

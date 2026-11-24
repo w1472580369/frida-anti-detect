@@ -201,21 +201,90 @@ public class HelperBackend {
 			Object t = c.getDeclaredMethod("systemMain").invoke(null);
 			return (Context) c.getDeclaredMethod("getSystemContext").invoke(t);
 		} catch (InvocationTargetException e) {
-			Class<?> r = Class.forName("android.content.res.Resources");
-			Field f = r.getDeclaredField("sSystem");
-			f.setAccessible(true);
-			if (f.get(null) == null) {
-				Class<?> a = Class.forName("android.content.res.AssetManager");
-				Constructor<?> ac = a.getDeclaredConstructor();
-				ac.setAccessible(true);
-				Object am = ac.newInstance();
-				Constructor<?> rc = r.getDeclaredConstructor(a, DisplayMetrics.class, Configuration.class);
-				rc.setAccessible(true);
-				f.set(null, rc.newInstance(am, new DisplayMetrics(), new Configuration()));
-			}
-			Object t = c.getDeclaredMethod("systemMain").invoke(null);
-			return (Context) c.getDeclaredMethod("getSystemContext").invoke(t);
+			// MIUI 上 systemMain() 会因为 ThemeCompatibility.<clinit> 读
+			// /data/system/theme_config/theme_compatibility.xml 失败而抛异常，
+			// 且类已进入 erroneous state —— 重试 systemMain() 必然再次失败，
+			// 所以这里不能重试，改为完全绕开它、直接构造 ContextImpl。
+			return createContextViaReflection(c);
 		}
+	}
+
+	/**
+	 * 不依赖 ActivityThread.systemMain()，直接用反射拼一个系统 Context。
+	 *
+	 * 之所以需要这条路：MIUI 的 miui.content.res.ThemeCompatibility.<clinit>
+	 * 在 theme_compatibility.xml 缺失时抛 FileNotFoundException，导致
+	 * MiuiResourcesImpl.<clinit> 失败；而 Resources.getSystem() 会触发它，
+	 * 于是 ActivityThread.systemMain() 必失败。类静态初始化一旦失败就被 JVM
+	 * 标记为 erroneous state，任何重试都会立刻抛同样的 NoClassDefFoundError，
+	 * 因此必须绕开 Resources.getSystem() 相关路径。
+	 */
+	private static Context createContextViaReflection(Class<?> activityThreadClass) throws Exception {
+		Class<?> resourcesClass = Class.forName("android.content.res.Resources");
+		Class<?> assetManagerClass = Class.forName("android.content.res.AssetManager");
+		Class<?> contextImplClass = Class.forName("android.app.ContextImpl");
+
+		// 1) 构造 AssetManager
+		Constructor<?> amCtor = assetManagerClass.getDeclaredConstructor();
+		amCtor.setAccessible(true);
+		Object assetManager = amCtor.newInstance();
+
+		// 2) 构造 Resources
+		Constructor<?> resCtor = resourcesClass.getDeclaredConstructor(
+				assetManagerClass, DisplayMetrics.class, Configuration.class);
+		resCtor.setAccessible(true);
+		Resources resources = (Resources) resCtor.newInstance(
+				assetManager, new DisplayMetrics(), new Configuration());
+
+		// 3) 构造 ContextImpl（不同 Android 版本签名不同，逐个尝试）
+		Object contextImpl = null;
+		Constructor<?>[] ctors = contextImplClass.getDeclaredConstructors();
+		for (Constructor<?> ctor : ctors) {
+			Class<?>[] params = ctor.getParameterTypes();
+			Object[] args = new Object[params.length];
+			boolean usable = true;
+			for (int i = 0; i != params.length; i++) {
+				Class<?> p = params[i];
+				if (p == String.class) {
+					args[i] = "android";
+				} else if (p == Resources.class) {
+					args[i] = resources;
+				} else if (p == ClassLoader.class) {
+					args[i] = HelperBackend.class.getClassLoader();
+				} else if (p.isPrimitive() && p == int.class) {
+					args[i] = 0;
+				} else if (p.isPrimitive() && p == boolean.class) {
+					args[i] = false;
+				} else {
+					usable = false;
+					break;
+				}
+			}
+			if (!usable) {
+				continue;
+			}
+			try {
+				ctor.setAccessible(true);
+				contextImpl = ctor.newInstance(args);
+				break;
+			} catch (Throwable ignored) {
+			}
+		}
+		if (contextImpl == null) {
+			throw new RuntimeException("无法构造 ContextImpl，MIUI 主题初始化失败且反射回退不可用");
+		}
+
+		// 4) 尝试把系统资源挂到 Resources.sSystem（供后续代码路径使用）
+		try {
+			Field sSystem = resourcesClass.getDeclaredField("sSystem");
+			sSystem.setAccessible(true);
+			if (sSystem.get(null) == null) {
+				sSystem.set(null, resources);
+			}
+		} catch (Throwable ignored) {
+		}
+
+		return (Context) contextImpl;
 	}
 
 	private static void preInitVendorExtensions() {

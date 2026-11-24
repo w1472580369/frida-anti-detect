@@ -24,8 +24,19 @@ public class FridaInjector {
     private static final String REMOTE_DIR = "/data/local/tmp";
     private static final String REMOTE_BIN = REMOTE_DIR + "/.svc-helper";
     // 升级标记：stock 与 patched 的 libfinj.so 尺寸相同，不能只比 size。
-    private static final String INJECTOR_TAG = "patched-17.19.0-r3-miui";
+    // 每次重新构建 libfinj.so 都必须改这个 tag，否则 ensureBinary() 会复用旧的
+    // /data/local/tmp/.svc-helper，导致修复不生效（v1.1 曾踩过这个坑）。
+    private static final String INJECTOR_TAG = "patched-17.19.0-r4-miui-libcshim";
     private static final String PREFS = "frida_phone";
+
+    // MIUI 兼容：ThemeCompatibility.<clinit> 会读这个文件，缺失时抛 ENOENT 并让
+    // ActivityThread.systemMain() 失败，进而使 frida helper 初始化崩溃。
+    // 注意：helper 运行在目标 App 的 uid 下无权写 /data/system，必须在注入前
+    // 由 App 层（root）预创建，不能指望 helper 自己修。
+    private static final String MIUI_THEME_DIR = "/data/system/theme_config";
+    private static final String MIUI_THEME_XML = MIUI_THEME_DIR + "/theme_compatibility.xml";
+    private static final String MIUI_THEME_XML_CONTENT =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<theme-compatibility version=\"1\"/>\n";
 
     public final int targetPid;
     public final int port;
@@ -69,6 +80,7 @@ public class FridaInjector {
         }
 
         String bin = ensureBinary(context);
+        ensureMiuiThemeCompat();
         String cmd = bin + " -p " + pid + " -s " + remoteScript;
         LogBus.add("inject", "执行: " + cmd);
 
@@ -88,6 +100,55 @@ public class FridaInjector {
         }
         LogBus.add("inject", "已附加 PID " + pid + "，控制端口 " + port);
         return new FridaInjector(pid, port, token, client, process);
+    }
+
+    /**
+     * MIUI 兼容补丁：预创建 /data/system/theme_config/theme_compatibility.xml。
+     *
+     * 背景：MIUI 的 miui.content.res.ThemeCompatibility.<clinit> 会读这个 XML，
+     * 文件不存在时抛 FileNotFoundException(ENOENT)。该异常会让
+     * android.content.res.MiuiResourcesImpl.<clinit> 失败，进而
+     * ActivityThread.systemMain() 抛异常，最终导致注入进目标进程的 frida helper
+     * 在构造 HelperBackend 时崩溃（Agent connection closed unexpectedly）。
+     *
+     * 由于类静态初始化失败后 JVM 会把它标记为 erroneous state，事后重试
+     * systemMain() 无效（HelperBackend 原有的回退逻辑就踩了这个坑），
+     * 因此必须在注入之前把这个文件准备好。
+     *
+     * 非 MIUI 设备上该操作无副作用（只是多建一个没人读的文件）。
+     */
+    static void ensureMiuiThemeCompat() {
+        try {
+            // 已存在就不动，避免覆盖用户/系统的真实配置
+            RootShell.Result exists = RootShell.runRoot(
+                    "test -f " + MIUI_THEME_XML + " && echo yes || echo no");
+            if (exists.ok && "yes".equals(exists.out.trim())) {
+                return;
+            }
+
+            RootShell.Result mk = RootShell.runRoot(
+                    "mkdir -p " + MIUI_THEME_DIR + " && chmod 755 " + MIUI_THEME_DIR);
+            if (!mk.ok) {
+                LogBus.add("inject", "MIUI 主题兼容: 创建目录失败 " + mk.out);
+                return;
+            }
+
+            // 用 base64 传内容，避免 shell 引号/换行转义问题
+            String b64 = android.util.Base64.encodeToString(
+                    MIUI_THEME_XML_CONTENT.getBytes(StandardCharsets.UTF_8),
+                    android.util.Base64.NO_WRAP);
+            RootShell.Result wr = RootShell.runRoot(
+                    "echo " + b64 + " | base64 -d > " + MIUI_THEME_XML
+                            + " && chmod 644 " + MIUI_THEME_XML);
+            if (wr.ok) {
+                LogBus.add("inject", "MIUI 主题兼容: 已创建 " + MIUI_THEME_XML);
+            } else {
+                LogBus.add("inject", "MIUI 主题兼容: 写入失败 " + wr.out);
+            }
+        } catch (Exception e) {
+            // 非致命：失败时继续注入，让原有流程给出真实错误
+            LogBus.add("inject", "MIUI 主题兼容: 跳过 (" + e.getMessage() + ")");
+        }
     }
 
     private static String ensureBinary(Context context) throws Exception {

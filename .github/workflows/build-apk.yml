@@ -2,7 +2,7 @@ name: build-apk
 
 # 全链路：从 Frida 源码构建 patched frida-inject / frida-server（arm64），
 # 把产物塞回 android-app/jniLibs/arm64-v8a/ 作为 libfinj.so / libfsrv.so，
-# 然后重新打包并签名 APK，产出可直接安装的 FridaPhone-1.1.apk。
+# 然后重新打包并签名 APK，产出可直接安装的 FridaPhone-1.2.apk。
 #
 # 关键点：APK 里那两个 .so 其实是「可执行文件改名」，不是真正的共享库：
 #   libfinj.so <- frida-inject（App 释放到 /data/local/tmp/.svc-helper 执行）
@@ -32,7 +32,7 @@ on:
 env:
   ANDROID_NDK_VERSION: r29
   FRIDA_VERSION: '17.19.0'
-  APK_NAME: FridaPhone-1.1
+  APK_NAME: FridaPhone-1.2
 
 jobs:
   build-apk:
@@ -193,9 +193,9 @@ jobs:
         run: |
           set -e
           mkdir -p out
-          # build_apk.sh 产出 dist/FridaPhone-1.1.apk.bin 与 dist/FridaPhone-1.1-apk.zip
-          cp dist/FridaPhone-1.1.apk.bin out/"${APK_NAME}.apk" 2>/dev/null || true
-          cp dist/FridaPhone-1.1-apk.zip out/ 2>/dev/null || true
+          # build_apk.sh 产出 dist/FridaPhone-1.2.apk.bin 与 dist/FridaPhone-1.2-apk.zip
+          cp dist/FridaPhone-1.2.apk.bin out/"${APK_NAME}.apk" 2>/dev/null || true
+          cp dist/FridaPhone-1.2-apk.zip out/ 2>/dev/null || true
           # 兜底：直接从构建目录取签名后的 APK
           if [ ! -s "out/${APK_NAME}.apk" ]; then
             cp "$RUNNER_TEMP/frida-phone-build/${APK_NAME}.apk" "out/${APK_NAME}.apk"

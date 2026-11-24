@@ -15,7 +15,7 @@ public final class ServerManager {
     private static final String REMOTE_BIN = "/data/local/tmp/.svc-server";
     private static final String REMOTE_LOG = "/data/local/tmp/.svc-server.log";
     private static final String PREFS = "frida_phone";
-    private static final String SERVER_TAG = "compat-17.19.0-miui-r2";
+    private static final String SERVER_TAG = "compat-17.19.0-miui-r3-libcshim";
 
     private ServerManager() {
     }
@@ -35,6 +35,7 @@ public final class ServerManager {
             throw new IOException("未获取 root");
         }
         ensureBinary(context);
+        FridaInjector.ensureMiuiThemeCompat();
         RootShell.runRoot("pkill -f '.svc-server'");
         RootShell.runRoot("rm -f " + REMOTE_LOG);
 

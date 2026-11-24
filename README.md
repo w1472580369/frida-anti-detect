@@ -1,8 +1,8 @@
 # Frida anti-detect 魔改项目
 
 > **仓库**：https://github.com/w1472580369/frida-anti-detect（private）  
-> **Release v1.1**：https://github.com/w1472580369/frida-anti-detect/releases/tag/v1.1  
-> 含 `FridaPhone-1.1-apk.zip` 与 `frida-anti-detect-source-17.19.0.zip`。
+> **Release v1.2**：https://github.com/w1472580369/frida-anti-detect/releases/tag/v1.2  
+> 含 `FridaPhone-1.2-apk.zip` 与 `frida-anti-detect-source-17.19.0.zip`。
 
 目标：修改 Frida 源码，消除市场上主流 App 的本地检测特征，并**真实构建出可直接使用的 Android frida-server**。
 
@@ -84,8 +84,8 @@ frida-anti-detect/
 |---|---|---|
 | `frida-server-17.19.0-android-arm64` | ARM64，**compat 版**（保留 `re.frida`） | ~56 MB |
 | `frida-server-17.19.0-android-arm` | ARM32（老设备，stealth 版） | ~26 MB |
-| `FridaPhone-1.1-apk.zip` | Android 客户端 APK + 安装说明 | ~50 MB |
-| `FridaPhone-1.1.apk.bin` | 同一 APK 的原始字节（下载后改名 `.apk`） | ~50 MB |
+| `FridaPhone-1.2-apk.zip` | Android 客户端 APK + 安装说明 | ~50 MB |
+| `FridaPhone-1.2.apk.bin` | 同一 APK 的原始字节（下载后改名 `.apk`） | ~50 MB |
 | `frida-17.19.0-cp37-abi3-linux_x86_64.whl` | **stealth 模式配套 PC 客户端**（abi3，Python 3.7~3.13 通用） | ~37 MB |
 | `frida-server-17.19.0-linux-x86_64` | Linux 版 server，仅用于本机协议自测 | ~41 MB |
 
