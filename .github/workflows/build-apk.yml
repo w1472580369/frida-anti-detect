@@ -1,0 +1,220 @@
+name: build-apk
+
+# 全链路：从 Frida 源码构建 patched frida-inject / frida-server（arm64），
+# 把产物塞回 android-app/jniLibs/arm64-v8a/ 作为 libfinj.so / libfsrv.so，
+# 然后重新打包并签名 APK，产出可直接安装的 FridaPhone-1.1.apk。
+#
+# 关键点：APK 里那两个 .so 其实是「可执行文件改名」，不是真正的共享库：
+#   libfinj.so <- frida-inject（App 释放到 /data/local/tmp/.svc-helper 执行）
+#   libfsrv.so <- frida-server（App 释放到 /data/local/tmp/.svc-server 执行）
+# 所以只需要按原文件名覆盖，无需 ELF 级改造。
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'D-Bus mode for frida-server (compat = 官方 frida-tools 可连)'
+        required: true
+        default: 'compat'
+        type: choice
+        options: [compat, stealth]
+      frida_ref:
+        description: 'Frida tag/ref'
+        required: false
+        default: '17.19.0'
+  push:
+    branches: [ main, master ]
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - 'patches/**'
+      - 'tools/**'
+      - 'android-app/**'
+
+env:
+  ANDROID_NDK_VERSION: r29
+  FRIDA_VERSION: '17.19.0'
+  APK_NAME: FridaPhone-1.1
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install host deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential git curl xz-utils ca-certificates \
+            openjdk-17-jdk-headless unzip zip python3
+          java -version
+
+      - name: Set up Android NDK ${{ env.ANDROID_NDK_VERSION }}
+        run: |
+          set -e
+          cd "$RUNNER_TEMP"
+          curl -fL -o ndk.zip "https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux.zip"
+          unzip -q ndk.zip
+          echo "ANDROID_NDK_ROOT=$RUNNER_TEMP/android-ndk-${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$RUNNER_TEMP/android-ndk-${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Clone Frida source
+        run: |
+          set -e
+          REF="${{ github.event.inputs.frida_ref || env.FRIDA_VERSION }}"
+          echo "Using Frida ref: $REF"
+          git clone --recurse-submodules --depth 1 --branch "$REF" https://github.com/frida/frida.git frida
+          git -C frida submodule update --init --recursive --depth 1
+
+      - name: Apply source patches (incl. 37-libc-shim agent fix)
+        run: python3 tools/apply_patches.py
+
+      - name: Select D-Bus mode
+        run: python3 tools/dbus_mode.py --mode "${{ github.event.inputs.mode || 'compat' }}"
+
+      - name: Rebuild helper.dex (Android 12 / MIUI systemMain fallback)
+        run: |
+          set -e
+          cd "$RUNNER_TEMP"
+          curl -fL -o platform.zip "https://dl.google.com/android/repository/platform-35_r02.zip"
+          unzip -q platform.zip
+          cd "$GITHUB_WORKSPACE"
+          python3 tools/build_helper_dex.py \
+            --frida frida \
+            --android-jar "$RUNNER_TEMP/android-35/android.jar" \
+            --tooldir "$RUNNER_TEMP/toolchain"
+
+      - name: Rebuild zymbiote stubs
+        run: python3 tools/build_zymbiote.py
+
+      - name: Configure android-arm64
+        working-directory: frida
+        run: ./configure --host=android-arm64
+
+      - name: Build frida-server and frida-inject
+        working-directory: frida
+        run: |
+          set -e
+          ninja -C build subprojects/frida-core/server/frida-server
+          ninja -C build subprojects/frida-core/inject/frida-inject
+
+      - name: Verify agent fix is present in built binaries
+        run: |
+          set -e
+          # 修复后 libc-shim 的构造顺序不再崩溃；这里做基础健全性检查
+          for f in frida/build/subprojects/frida-core/server/frida-server \
+                   frida/build/subprojects/frida-core/inject/frida-inject; do
+            echo "== $f"
+            file "$f"
+            test -s "$f" || { echo "::error::$f missing"; exit 1; }
+          done
+          # 反检测特征检查
+          for f in frida/build/subprojects/frida-core/server/frida-server \
+                   frida/build/subprojects/frida-core/inject/frida-inject; do
+            for bad in 27042 gum-js-loop frida:rpc frida-zymbiote; do
+              if strings "$f" | grep -q "$bad"; then echo "::error::$f still contains $bad"; exit 1; fi
+            done
+          done
+          echo "anti-detect markers OK"
+
+      - name: Replace jniLibs with freshly built binaries
+        run: |
+          set -e
+          LIBDIR=android-app/jniLibs/arm64-v8a
+          ls -l "$LIBDIR"
+          cp frida/build/subprojects/frida-core/inject/frida-inject "$LIBDIR/libfinj.so"
+          cp frida/build/subprojects/frida-core/server/frida-server   "$LIBDIR/libfsrv.so"
+          chmod 644 "$LIBDIR"/libfinj.so "$LIBDIR"/libfsrv.so
+          echo "--- replaced ---"
+          ls -l "$LIBDIR"
+          file "$LIBDIR"/libfinj.so "$LIBDIR"/libfsrv.so
+
+      - name: Set up Android build-tools (aapt2 / d8 / zipalign / apksigner)
+        run: |
+          set -e
+          cd "$RUNNER_TEMP"
+          # Android SDK commandline tools
+          curl -fL -o cmdline.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          unzip -q cmdline.zip
+          mkdir -p "$RUNNER_TEMP/android-sdk/cmdline-tools"
+          mv cmdline-tools "$RUNNER_TEMP/android-sdk/cmdline-tools/latest"
+          export ANDROID_HOME="$RUNNER_TEMP/android-sdk"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-35" "build-tools;35.0.0" > /dev/null
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          echo "BT=$BT" >> "$GITHUB_ENV"
+          ls "$BT" | head -20
+
+      - name: Build APK
+        run: |
+          set -e
+          # build_apk.sh 期望 $ROOT/toolchain/{bt/android-15, android-35/android.jar, jdk-17.0.13+11}
+          # 在 CI 里用软链接把这些路径指到真实 SDK / JDK
+          JH="${JAVA_HOME:-}"
+          if [ -z "$JH" ] || [ ! -x "$JH/bin/javac" ]; then
+            JH=$(dirname "$(dirname "$(readlink -f "$(which javac)")")")
+          fi
+          echo "JAVA_HOME resolved to: $JH"
+          test -x "$JH/bin/javac" || { echo "::error::javac not found"; exit 1; }
+
+          mkdir -p toolchain/bt toolchain/android-35
+          ln -sfn "$BT" toolchain/bt/android-15
+          ln -sfn "$ANDROID_HOME/platforms/android-35/android.jar" toolchain/android-35/android.jar
+          ln -sfn "$JH" toolchain/jdk-17.0.13+11
+
+          # 校验三个入口都存在
+          test -x toolchain/bt/android-15/aapt2      || { echo "::error::aapt2 missing"; exit 1; }
+          test -f toolchain/android-35/android.jar   || { echo "::error::android.jar missing"; exit 1; }
+          test -x toolchain/jdk-17.0.13+11/bin/javac || { echo "::error::javac missing"; exit 1; }
+
+          # 本地盘构建（避免网络盘 mmap 问题）
+          export FP_WORK="$RUNNER_TEMP/frida-phone-build"
+          bash android-app/build_apk.sh
+          echo "--- dist ---"
+          ls -lh dist/ || true
+
+      - name: Collect APK artifacts
+        run: |
+          set -e
+          mkdir -p out
+          # build_apk.sh 产出 dist/FridaPhone-1.1.apk.bin 与 dist/FridaPhone-1.1-apk.zip
+          cp dist/FridaPhone-1.1.apk.bin out/"${APK_NAME}.apk" 2>/dev/null || true
+          cp dist/FridaPhone-1.1-apk.zip out/ 2>/dev/null || true
+          # 兜底：直接从构建目录取签名后的 APK
+          if [ ! -s "out/${APK_NAME}.apk" ]; then
+            cp "$RUNNER_TEMP/frida-phone-build/${APK_NAME}.apk" "out/${APK_NAME}.apk"
+          fi
+          ls -lh out/
+          file "out/${APK_NAME}.apk"
+
+      - name: Verify APK
+        run: |
+          set -e
+          APK="out/${APK_NAME}.apk"
+          # 确认 APK 内含新的 libfinj.so / libfsrv.so 且大小合理（>40MB 说明不是占位）
+          unzip -l "$APK" | grep -E "lib/arm64-v8a/(libfinj|libfsrv)\.so"
+          for n in libfinj libfsrv; do
+            sz=$(unzip -l "$APK" | awk -v p="lib/arm64-v8a/$n.so" '$4==p {print $1}')
+            echo "$n.so size=$sz"
+            [ "${sz:-0}" -gt 10000000 ] || { echo "::error::$n.so too small ($sz) - build likely failed"; exit 1; }
+          done
+          "$BT/apksigner" verify --print-certs "$APK" | head -6
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_NAME }}-apk
+          path: out/
+          if-no-files-found: error
+
+      - name: Upload raw binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: frida-17.19.0-android-arm64-${{ github.event.inputs.mode || 'compat' }}
+          path: |
+            frida/build/subprojects/frida-core/server/frida-server
+            frida/build/subprojects/frida-core/inject/frida-inject
+          if-no-files-found: error

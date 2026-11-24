@@ -90,9 +90,9 @@ mkdir -p "$ROOT/dist"
 python3 - "$WORK" "$ROOT" <<'PYEOF'
 import hashlib, os, sys, zipfile
 work, root = sys.argv[1], sys.argv[2]
-src = os.path.join(work, "FridaPhone-1.0.apk")
-raw = os.path.join(root, "dist", "FridaPhone-1.0.apk.bin")
-zpath = os.path.join(root, "dist", "FridaPhone-1.0-apk.zip")
+src = os.path.join(work, "FridaPhone-1.1.apk")
+raw = os.path.join(root, "dist", "FridaPhone-1.1.apk.bin")
+zpath = os.path.join(root, "dist", "FridaPhone-1.1-apk.zip")
 
 def md5(path):
     h = hashlib.md5()
@@ -115,9 +115,9 @@ copy(src, raw)
 if md5(src) != md5(raw):
     raise SystemExit("回传校验失败: " + md5(src) + " != " + md5(raw))
 
-readme = """Frida Phone 1.0 安装说明
+readme = """Frida Phone 1.1 安装说明
 
-1. 将 FridaPhone-1.0.apk 安装到 arm64 Android 手机（Android 8.0+）。
+1. 将 FridaPhone-1.1.apk 安装到 arm64 Android 手机（Android 8.0+）。
 2. 手机需要 root（Magisk / KernelSU 均可），首次启动授予通知权限。
 3. 打开 App，在“进程”页选择目标应用 -> 附加；在“脚本”页运行 JS。
 4. “设置”页可查看 MCP 端点与令牌，AI 客户端通过
@@ -133,13 +133,13 @@ helper dex 由源码重建并含 Android 12 / MIUI systemMain 回退。
 """
 
 with zipfile.ZipFile(zpath, "w", zipfile.ZIP_STORED) as z:
-    z.write(src, "FridaPhone-1.0.apk")
+    z.write(src, "FridaPhone-1.1.apk")
     zi = zipfile.ZipInfo("安装说明.txt")
     zi.date_time = (2026, 11, 18, 22, 0, 0)
     z.writestr(zi, readme)
 
 with zipfile.ZipFile(zpath) as z:
-    inner = z.read("FridaPhone-1.0.apk")
+    inner = z.read("FridaPhone-1.1.apk")
     if hashlib.md5(inner).hexdigest() != md5(src):
         raise SystemExit("zip 内 APK 校验失败")
 print("apk md5:", md5(src))
@@ -147,6 +147,6 @@ print("zip:", zpath, os.path.getsize(zpath), "bytes")
 PYEOF
 
 echo
-echo "完成: $ROOT/dist/FridaPhone-1.0-apk.zip"
-ls -lh "$ROOT/dist/FridaPhone-1.0-apk.zip" "$ROOT/dist/FridaPhone-1.0.apk.bin"
+echo "完成: $ROOT/dist/FridaPhone-1.1-apk.zip"
+ls -lh "$ROOT/dist/FridaPhone-1.1-apk.zip" "$ROOT/dist/FridaPhone-1.1.apk.bin"
 "$BT/apksigner" verify --print-certs "$WORK/$NAME.apk" | head -6
