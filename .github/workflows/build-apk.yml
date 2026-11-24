@@ -135,6 +135,17 @@ jobs:
       - name: Set up Android build-tools (aapt2 / d8 / zipalign / apksigner)
         run: |
           set -e
+          # sdkmanager 需要 JDK 17（class file 61.0）；runner 默认 java 可能是 11，
+          # 必须先显式切到 openjdk-17，否则报 UnsupportedClassVersionError。
+          JH=$(dirname "$(dirname "$(readlink -f "$(which javac)")")")
+          if ! "$JH/bin/java" -version 2>&1 | grep -q 'version "17'; then
+            JH=/usr/lib/jvm/java-17-openjdk-amd64
+          fi
+          test -x "$JH/bin/java" || { echo "::error::JDK 17 not found"; exit 1; }
+          export JAVA_HOME="$JH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          java -version
           cd "$RUNNER_TEMP"
           # Android SDK commandline tools
           curl -fL -o cmdline.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
@@ -145,7 +156,7 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-35" "build-tools;35.0.0" > /dev/null
+            "platforms;android-35" "build-tools;35.0.0" 2>&1 | tail -20
           BT="$ANDROID_HOME/build-tools/35.0.0"
           echo "BT=$BT" >> "$GITHUB_ENV"
           ls "$BT" | head -20
