@@ -13,7 +13,7 @@ JAR="$ROOT/toolchain/android-35/android.jar"
 JDK="$ROOT/toolchain/jdk-17.0.13+11"
 WORK="${FP_WORK:-/tmp/frida-phone-build}"
 KS="$WORK/debug.keystore"
-NAME="FridaPhone-1.0"
+NAME="FridaPhone-1.1"
 
 export PATH="$JDK/bin:$PATH"
 
@@ -45,8 +45,8 @@ echo "[2/8] aapt2 link"
   --auto-add-overlay \
   --min-sdk-version 26 \
   --target-sdk-version 34 \
-  --version-code 1 \
-  --version-name 1.0 \
+  --version-code 2 \
+  --version-name 1.1 \
   "$WORK/compiled/res.zip"
 
 echo "[3/8] javac"

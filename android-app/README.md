@@ -3,7 +3,7 @@
 把本项目的能力装进手机：**不依赖 PC、不依赖 adb**，手机上直接完成进程查看、注入、脚本执行、RPC 调用，并内置一个 MCP 服务，让 AI 客户端（Claude Desktop、Cherry Studio、自研 Agent 等）通过 HTTP 调用本机能力。
 
 - 包名：`com.svc.fridactl`
-- 版本：1.0（versionCode 1）
+- 版本：1.1（versionCode 2）
 - minSdk 26 / targetSdk 34
 - 架构：arm64-v8a（仅 64 位设备/64 位进程；32 位应用无法注入）
 - UI：WebView + 原生 Java 桥（`Android` 对象），无第三方前端依赖
@@ -16,12 +16,12 @@
 
 | 文件 | 说明 |
 |---|---|
-| `FridaPhone-1.0-apk.zip` | 推荐。解压后得到 `FridaPhone-1.0.apk` + 安装说明，APK 未被云盘改写 |
-| `FridaPhone-1.0.apk.bin` | APK 原始字节，下载后**改名为 `.apk`** 即可安装 |
+| `FridaPhone-1.1-apk.zip` | 推荐。解压后得到 `FridaPhone-1.1.apk` + 安装说明，APK 未被云盘改写 |
+| `FridaPhone-1.1.apk.bin` | APK 原始字节，下载后**改名为 `.apk`** 即可安装 |
 
 ```bash
 # 方式一：adb
-adb install -r FridaPhone-1.0.apk
+adb install -r FridaPhone-1.1.apk
 
 # 方式二：手机浏览器/文件管理器直接点开安装
 ```
@@ -217,7 +217,7 @@ bash android-app/build_apk.sh
 5. Python 合并 `classes.dex` + `lib/arm64-v8a/libfinj.so` + `libfsrv.so`
 6. `zipalign -p 4`
 7. `apksigner` 签名（`keystore/debug.keystore`，不存在会自动生成）
-8. 回传 `dist/FridaPhone-1.0.apk.bin` 与 `dist/FridaPhone-1.0-apk.zip`，并校验 md5
+8. 回传 `dist/FridaPhone-1.1.apk.bin` 与 `dist/FridaPhone-1.1-apk.zip`，并校验 md5
 
 ### 目录
 

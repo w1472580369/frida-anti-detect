@@ -1,21 +1,13 @@
 # GitHub Actions workflows
 
-GitHub 拒绝 OAuth App 在没有 `workflow` scope 时推送 `.github/workflows/*.yml`。
-因此本目录先保存工作流源文件。
-
-启用方式（二选一）：
-
-1. 给 `gh` 增加 workflow scope 后执行：
-   ```bash
-   gh auth refresh -h github.com -s workflow
-   mkdir -p .github/workflows
-   git mv ci/workflows/*.yml .github/workflows/
-   git commit -m "Enable GitHub Actions workflows"
-   git push
-   ```
-2. 直接在 GitHub 网页端新建 `.github/workflows/` 并粘贴本目录文件。
+工作流已迁移到仓库根目录的 `.github/workflows/`，GitHub Actions 会自动识别。
 
 包含：
-- `build.yml`：从 Frida 17.19.0 源码构建 server + injector，可选 compat / stealth
-- `client-wheel.yml`：构建 stealth 模式配套 frida-python wheel
-- `anti-detect-build.yml`：全量构建保底路径
+- `build.yml`：从 Frida 17.19.0 源码构建 server + injector（arm64），可选 compat / stealth，
+  并应用 `patches/` 中的全部补丁（含 `37-core_lib_payload_libc-shim.c.patch`）。
+- `client-wheel.yml`：构建 stealth 模式配套 frida-python wheel。
+- `anti-detect-build.yml`：全量构建保底路径。
+
+触发方式：Actions 页面选择 `source-build` → Run workflow，`mode` 选 `compat`（APK 默认）。
+
+> 注意：推送 `.github/workflows/*.yml` 需要 token 具备 `workflow` scope。
