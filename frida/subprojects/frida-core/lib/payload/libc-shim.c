@@ -294,12 +294,21 @@ frida_libc_shim_init (void)
   if (frida_libc_shim_initialized)
     return;
 
-  gum_init_embedded ();
-
   f0 = NULL;
   f1 = NULL;
   f2 = NULL;
 
+  /*
+   * The stream/dir registries must exist before gum_init_embedded(), because
+   * gum's own init path may end up in fopen()/fdopen() (e.g. when the module
+   * registry reads /proc/self/auxv through g_file_get_contents(), which uses
+   * fdopen() for non-regular files).  Our fdopen() shim calls
+   * frida_stdio_register_stream(), which does g_hash_table_add() on
+   * frida_streams -- if that hash table is still NULL at this point we
+   * dereference NULL while loading the agent, crashing the target process
+   * inside its ELF constructors.  Create the tables first so the shim is
+   * usable as soon as gum starts up.
+   */
   G_LOCK (frida_stdio);
 
   frida_streams = g_hash_table_new (g_direct_hash, g_direct_equal);
@@ -308,6 +317,8 @@ frida_libc_shim_init (void)
 #endif
 
   G_UNLOCK (frida_stdio);
+
+  gum_init_embedded ();
 
   f0 = frida_file_new (0, FALSE, _IOFBF);
 #ifndef FRIDA_STDIO_OPAQUE_FILE

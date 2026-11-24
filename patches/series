@@ -34,6 +34,7 @@
 34-core_src_droidy_droidy-host-session.vala.patch	[core] src/droidy/droidy-host-session.vala
 35-core_src_droidy_injector.vala.patch	[core] src/droidy/injector.vala
 36-core_src_fruity_device-monitor-macos.vala.patch	[core] src/fruity/device-monitor-macos.vala
+37-core_lib_payload_libc-shim.c.patch	[core] lib/payload/libc-shim.c
 37-core_src_fruity_fruity-host-session.vala.patch	[core] src/fruity/fruity-host-session.vala
 38-core_src_linux_frida-helper-backend.vala.patch	[core] src/linux/frida-helper-backend.vala
 39-core_src_linux_frida-helper-process.vala.patch	[core] src/linux/frida-helper-process.vala
