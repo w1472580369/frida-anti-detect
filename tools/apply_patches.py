@@ -11,7 +11,7 @@ Each series line looks like:
 Patches are standard unified diffs (including GIT binary patches),
 applied with `git apply`. Idempotent: already-applied patches are skipped.
 """
-import subprocess, sys, pathlib
+import argparse, subprocess, sys, pathlib
 
 BASE = pathlib.Path(__file__).resolve().parents[1]
 PATCHES = BASE / "patches"
@@ -22,10 +22,28 @@ REPO_FOR_PREFIX = {
     "core": FRIDA / "subprojects" / "frida-core",
 }
 
+
+def configure(frida_root):
+    """Point the patch targets at an arbitrary frida source tree.
+
+    Needed by CI, where a clean Frida checkout lives somewhere other than the
+    in-repo ``frida/`` snapshot (e.g. ``frida-src/``).
+    """
+    global FRIDA
+    FRIDA = pathlib.Path(frida_root).resolve()
+    REPO_FOR_PREFIX["gum"] = FRIDA / "subprojects" / "frida-gum"
+    REPO_FOR_PREFIX["core"] = FRIDA / "subprojects" / "frida-core"
+
 def run(cmd, cwd):
     return subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--frida", default=str(FRIDA),
+                    help="frida source root (default: <repo>/frida)")
+    args = ap.parse_args()
+    configure(args.frida)
+
     series = PATCHES / "series"
     if not series.exists():
         sys.exit(f"missing {series}")

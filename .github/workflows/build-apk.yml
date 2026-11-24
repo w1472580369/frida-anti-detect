@@ -64,14 +64,16 @@ jobs:
           set -e
           REF="${{ github.event.inputs.frida_ref || env.FRIDA_VERSION }}"
           echo "Using Frida ref: $REF"
-          git clone --recurse-submodules --depth 1 --branch "$REF" https://github.com/frida/frida.git frida
-          git -C frida submodule update --init --recursive --depth 1
+          # 注意：仓库根目录已存在 frida/（内联源码快照），干净源码必须克隆到别的路径
+          rm -rf frida-src
+          git clone --recurse-submodules --depth 1 --branch "$REF" https://github.com/frida/frida.git frida-src
+          git -C frida-src submodule update --init --recursive --depth 1
 
       - name: Apply source patches (incl. 37-libc-shim agent fix)
-        run: python3 tools/apply_patches.py
+        run: python3 tools/apply_patches.py --frida frida-src
 
       - name: Select D-Bus mode
-        run: python3 tools/dbus_mode.py --mode "${{ github.event.inputs.mode || 'compat' }}"
+        run: python3 tools/dbus_mode.py --frida frida-src --mode "${{ github.event.inputs.mode || 'compat' }}"
 
       - name: Rebuild helper.dex (Android 12 / MIUI systemMain fallback)
         run: |
@@ -81,19 +83,19 @@ jobs:
           unzip -q platform.zip
           cd "$GITHUB_WORKSPACE"
           python3 tools/build_helper_dex.py \
-            --frida frida \
+            --frida frida-src \
             --android-jar "$RUNNER_TEMP/android-35/android.jar" \
             --tooldir "$RUNNER_TEMP/toolchain"
 
       - name: Rebuild zymbiote stubs
-        run: python3 tools/build_zymbiote.py
+        run: python3 tools/build_zymbiote.py --frida frida-src
 
       - name: Configure android-arm64
-        working-directory: frida
+        working-directory: frida-src
         run: ./configure --host=android-arm64
 
       - name: Build frida-server and frida-inject
-        working-directory: frida
+        working-directory: frida-src
         run: |
           set -e
           ninja -C build subprojects/frida-core/server/frida-server
@@ -103,15 +105,15 @@ jobs:
         run: |
           set -e
           # 修复后 libc-shim 的构造顺序不再崩溃；这里做基础健全性检查
-          for f in frida/build/subprojects/frida-core/server/frida-server \
-                   frida/build/subprojects/frida-core/inject/frida-inject; do
+          for f in frida-src/build/subprojects/frida-core/server/frida-server \
+                   frida-src/build/subprojects/frida-core/inject/frida-inject; do
             echo "== $f"
             file "$f"
             test -s "$f" || { echo "::error::$f missing"; exit 1; }
           done
           # 反检测特征检查
-          for f in frida/build/subprojects/frida-core/server/frida-server \
-                   frida/build/subprojects/frida-core/inject/frida-inject; do
+          for f in frida-src/build/subprojects/frida-core/server/frida-server \
+                   frida-src/build/subprojects/frida-core/inject/frida-inject; do
             for bad in 27042 gum-js-loop frida:rpc frida-zymbiote; do
               if strings "$f" | grep -q "$bad"; then echo "::error::$f still contains $bad"; exit 1; fi
             done
@@ -123,8 +125,8 @@ jobs:
           set -e
           LIBDIR=android-app/jniLibs/arm64-v8a
           ls -l "$LIBDIR"
-          cp frida/build/subprojects/frida-core/inject/frida-inject "$LIBDIR/libfinj.so"
-          cp frida/build/subprojects/frida-core/server/frida-server   "$LIBDIR/libfsrv.so"
+          cp frida-src/build/subprojects/frida-core/inject/frida-inject "$LIBDIR/libfinj.so"
+          cp frida-src/build/subprojects/frida-core/server/frida-server   "$LIBDIR/libfsrv.so"
           chmod 644 "$LIBDIR"/libfinj.so "$LIBDIR"/libfsrv.so
           echo "--- replaced ---"
           ls -l "$LIBDIR"
@@ -215,6 +217,6 @@ jobs:
         with:
           name: frida-17.19.0-android-arm64-${{ github.event.inputs.mode || 'compat' }}
           path: |
-            frida/build/subprojects/frida-core/server/frida-server
-            frida/build/subprojects/frida-core/inject/frida-inject
+            frida-src/build/subprojects/frida-core/server/frida-server
+            frida-src/build/subprojects/frida-core/inject/frida-inject
           if-no-files-found: error

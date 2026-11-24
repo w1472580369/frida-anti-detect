@@ -24,6 +24,14 @@ HELPERS = FRIDA_CORE / "src" / "linux" / "helpers"
 ARTIFACTS = HELPERS / "artifacts" / "native"
 
 
+def configure(frida_root):
+    """Point the helper/artifact paths at an arbitrary frida source tree."""
+    global FRIDA_CORE, HELPERS, ARTIFACTS
+    FRIDA_CORE = Path(frida_root).resolve() / "subprojects" / "frida-core"
+    HELPERS = FRIDA_CORE / "src" / "linux" / "helpers"
+    ARTIFACTS = HELPERS / "artifacts" / "native"
+
+
 def ndk_root() -> Path:
     root = os.environ.get("ANDROID_NDK_ROOT") or os.environ.get("ANDROID_NDK_HOME")
     if not root:
@@ -54,7 +62,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true",
                     help="verify the artifacts contain no frida-zymbiote strings")
+    ap.add_argument("--frida", default=str(Path(__file__).resolve().parent.parent / "frida"),
+                    help="frida source root (default: <repo>/frida)")
     args = ap.parse_args()
+    configure(args.frida)
 
     ndk = ndk_root()
     clang = find_clang(ndk)
