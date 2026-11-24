@@ -26,7 +26,7 @@ public class FridaInjector {
     // 升级标记：stock 与 patched 的 libfinj.so 尺寸相同，不能只比 size。
     // 每次重新构建 libfinj.so 都必须改这个 tag，否则 ensureBinary() 会复用旧的
     // /data/local/tmp/.svc-helper，导致修复不生效（v1.1 曾踩过这个坑）。
-    private static final String INJECTOR_TAG = "patched-17.19.0-r4-miui-libcshim";
+    private static final String INJECTOR_TAG = "patched-17.19.0-r5-miui-nullguard";
     private static final String PREFS = "frida_phone";
 
     // MIUI 兼容：ThemeCompatibility.<clinit> 会读这个文件，缺失时抛 ENOENT 并让

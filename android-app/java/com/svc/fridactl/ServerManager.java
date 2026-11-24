@@ -15,7 +15,7 @@ public final class ServerManager {
     private static final String REMOTE_BIN = "/data/local/tmp/.svc-server";
     private static final String REMOTE_LOG = "/data/local/tmp/.svc-server.log";
     private static final String PREFS = "frida_phone";
-    private static final String SERVER_TAG = "compat-17.19.0-miui-r3-libcshim";
+    private static final String SERVER_TAG = "compat-17.19.0-miui-r4-nullguard";
 
     private ServerManager() {
     }

@@ -208,7 +208,7 @@ public class AppCore {
             m.put("token", mcpToken);
             m.put("url", "http://" + localIp() + ":" + mcpPort + "/mcp");
             o.put("mcp", m);
-            o.put("injector", "patched-17.19.0-r4-miui-libcshim");
+            o.put("injector", "patched-17.19.0-r5-miui-nullguard");
             o.put("server_mode", "compat");
         } catch (Exception e) {
             o = error("状态读取失败: " + e.getMessage());
@@ -423,7 +423,7 @@ public class AppCore {
             o.put("ok", true);
             o.put("title", "Frida Phone 说明（兼容版）");
             o.put("version", "17.19.0-compat");
-            o.put("injector", "patched-17.19.0-r4-miui-libcshim");
+            o.put("injector", "patched-17.19.0-r5-miui-nullguard");
             o.put("server_mode", "compat");
             o.put("ip", ip);
             o.put("server_port", ServerManager.PORT);

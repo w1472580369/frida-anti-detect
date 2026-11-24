@@ -294,21 +294,12 @@ frida_libc_shim_init (void)
   if (frida_libc_shim_initialized)
     return;
 
+  gum_init_embedded ();
+
   f0 = NULL;
   f1 = NULL;
   f2 = NULL;
 
-  /*
-   * The stream/dir registries must exist before gum_init_embedded(), because
-   * gum's own init path may end up in fopen()/fdopen() (e.g. when the module
-   * registry reads /proc/self/auxv through g_file_get_contents(), which uses
-   * fdopen() for non-regular files).  Our fdopen() shim calls
-   * frida_stdio_register_stream(), which does g_hash_table_add() on
-   * frida_streams -- if that hash table is still NULL at this point we
-   * dereference NULL while loading the agent, crashing the target process
-   * inside its ELF constructors.  Create the tables first so the shim is
-   * usable as soon as gum starts up.
-   */
   G_LOCK (frida_stdio);
 
   frida_streams = g_hash_table_new (g_direct_hash, g_direct_equal);
@@ -317,8 +308,6 @@ frida_libc_shim_init (void)
 #endif
 
   G_UNLOCK (frida_stdio);
-
-  gum_init_embedded ();
 
   f0 = frida_file_new (0, FALSE, _IOFBF);
 #ifndef FRIDA_STDIO_OPAQUE_FILE
@@ -373,27 +362,30 @@ frida_libc_shim_deinit (void)
 
   G_LOCK (frida_stdio);
 
-  g_hash_table_iter_init (&iter, frida_streams);
-
-  while (g_hash_table_iter_next (&iter, &key, NULL))
+  if (frida_streams != NULL)
   {
-    FILE * stream = key;
-    FridaFile * f;
+    g_hash_table_iter_init (&iter, frida_streams);
 
-    f = frida_file_get_impl (stream);
+    while (g_hash_table_iter_next (&iter, &key, NULL))
+    {
+      FILE * stream = key;
+      FridaFile * f;
 
-    frida_file_flush_write (f);
+      f = frida_file_get_impl (stream);
 
-    if (f->close_fd)
-      frida_close_nointr (f->fd);
+      frida_file_flush_write (f);
 
-    frida_file_free (f);
-    frida_file_unwrap (stream);
+      if (f->close_fd)
+        frida_close_nointr (f->fd);
 
-    g_hash_table_iter_remove (&iter);
+      frida_file_free (f);
+      frida_file_unwrap (stream);
+
+      g_hash_table_iter_remove (&iter);
+    }
+
+    g_clear_pointer (&frida_streams, g_hash_table_unref);
   }
-
-  g_clear_pointer (&frida_streams, g_hash_table_unref);
 
 #ifdef HAVE_FRIDA_DIR
   g_hash_table_iter_init (&iter, frida_dirs);
@@ -1916,6 +1908,20 @@ frida_stdio_register_stream (FILE * stream)
 {
   G_LOCK (frida_stdio);
 
+  if (frida_streams == NULL)
+  {
+    /*
+     * Reached before frida_libc_shim_init() finished creating the registry,
+     * i.e. during gum_init_embedded(): gum's module registry reads
+     * /proc/self/auxv through g_file_get_contents(), which ends up in our
+     * fdopen() shim.  Creating the table lazily keeps the shim usable no
+     * matter which side wins the race.  g_hash_table_new() only needs the
+     * slice allocator, which gum_init_embedded() has already set up by the
+     * time we get here, so this is safe.
+     */
+    frida_streams = g_hash_table_new (g_direct_hash, g_direct_equal);
+  }
+
   g_hash_table_add (frida_streams, stream);
 
   G_UNLOCK (frida_stdio);
@@ -1926,7 +1932,8 @@ frida_stdio_unregister_stream (FILE * stream)
 {
   G_LOCK (frida_stdio);
 
-  g_hash_table_remove (frida_streams, stream);
+  if (frida_streams != NULL)
+    g_hash_table_remove (frida_streams, stream);
 
   G_UNLOCK (frida_stdio);
 }
@@ -1963,17 +1970,20 @@ frida_flush_all_streams (int * result)
 
   G_LOCK (frida_stdio);
 
-  g_hash_table_iter_init (&iter, frida_streams);
-
-  while (g_hash_table_iter_next (&iter, &key, NULL))
+  if (frida_streams != NULL)
   {
-    FILE * s = key;
-    FridaFile * f;
+    g_hash_table_iter_init (&iter, frida_streams);
 
-    f = frida_file_get_impl (s);
+    while (g_hash_table_iter_next (&iter, &key, NULL))
+    {
+      FILE * s = key;
+      FridaFile * f;
 
-    if (frida_file_flush_write (f) != 0)
-      *result = EOF;
+      f = frida_file_get_impl (s);
+
+      if (frida_file_flush_write (f) != 0)
+        *result = EOF;
+    }
   }
 
   G_UNLOCK (frida_stdio);

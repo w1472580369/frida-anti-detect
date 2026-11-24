@@ -45,7 +45,7 @@ ninja -C build subprojects/frida-core/inject/frida-inject
 bash android-app/build_apk.sh
 ```
 
-产物在 `dist/FridaPhone-1.2-apk.zip`。
+产物在 `dist/FridaPhone-1.3-apk.zip`。
 
 ## 重要取舍
 
